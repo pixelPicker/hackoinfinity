@@ -11,7 +11,11 @@ import {
 
 export default function Home() {
   return (
+<<<<<<< HEAD
     <div className="min-h-screen w-full bg-[#fff8f0] relative">
+=======
+    <div className="min-h-screen w-full bg-white relative">
+>>>>>>> upstream/master
       <div className="absolute top-1/15 left-1/2 -translate-1/2"><Logo /></div>
       <div
         className="absolute inset-0 z-0"
@@ -47,7 +51,11 @@ function Hero() {
       </p>
       <div className="mt-8 flex gap-4">
         <Link
+<<<<<<< HEAD
           href="/"
+=======
+          href="/whiteboard"
+>>>>>>> upstream/master
           className={clsx(
             "text-black font-medium cursor-pointer text-lg flex items-center gap-2 border-[6px] z-[2] border-white/50 bg-clip-padding rounded-full px-10 py-3 bg-no-repeat bg-gradient-to-br from-Accent to-Accent-Dark",
             "before:content[''] before:w-full before:h-full before:absolute relative before:top-[5px] before:left-[5px] before:rounded-full before:blur-lg before:bg-gradient-to-t before:from-Accent before:to-transparent before:-z-10",
@@ -70,7 +78,11 @@ function Hero() {
 
       <div className="absolute bottom-[20px] cursor-pointer left-1/2 -translate-1/2 px-4 py-2 rounded-full bg-Secondary-Text/45 hover:bg-Secondary-Text/55 transition-all backdrop-blur-lg text-white flex items-center gap-2 ">
         <IconTrophy />
+<<<<<<< HEAD
         <Link href="/leaderboard">Leaderboard</Link>
+=======
+        Leaderboard
+>>>>>>> upstream/master
       </div>
       <Image
         src={"/heroicons/illustration1.svg"}
