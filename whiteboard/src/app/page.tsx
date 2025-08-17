@@ -1,103 +1,105 @@
+import Link from "next/link";
+import { Logo } from "@/app/ui/components/logo";
+import { spaceGrotesk } from "@/app/ui/fonts";
+import clsx from "clsx";
 import Image from "next/image";
+import {
+  IconPencilBolt,
+  IconPlayerPlay,
+  IconTrophy,
+} from "@tabler/icons-react";
 
 export default function Home() {
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+    <div className="min-h-screen w-full bg-[#fff8f0] relative">
+      <div className="absolute top-1/15 left-1/2 -translate-1/2"><Logo /></div>
+      <div
+        className="absolute inset-0 z-0"
+        style={{
+          backgroundImage: `
+        radial-gradient(circle at 20% 80%, rgba(255, 182, 153, 0.3) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(255, 244, 214, 0.5) 0%, transparent 50%),
+        radial-gradient(circle at 40% 40%, rgba(255, 182, 153, 0.1) 0%, transparent 50%)`,
+        }}
+      />
+      <Hero />
     </div>
+  );
+}
+
+function Hero() {
+  return (
+    <section className="relative w-full h-screen flex flex-col items-center justify-center text-center">
+      <h1
+        className={clsx(
+          "text-6xl font-extrabold text-Primary-Text tracking-tight",
+          spaceGrotesk.className
+        )}
+      >
+        Create. Collaborate.{" "}
+        <span className="bg-clip-text text-transparent bg-gradient-to-r from-Accent to-Accent-Dark">
+          Doodle Together.
+        </span>
+      </h1>
+      <p className="mt-5 text-lg text-gray-700 max-w-2xl">
+        DoodleSquad is your online collaborative whiteboard where ideas come to
+        life. Sketch, brainstorm, and co-create with your team in real-time.
+      </p>
+      <div className="mt-8 flex gap-4">
+        <Link
+          href="/"
+          className={clsx(
+            "text-black font-medium cursor-pointer text-lg flex items-center gap-2 border-[6px] z-[2] border-white/50 bg-clip-padding rounded-full px-10 py-3 bg-no-repeat bg-gradient-to-br from-Accent to-Accent-Dark",
+            "before:content[''] before:w-full before:h-full before:absolute relative before:top-[5px] before:left-[5px] before:rounded-full before:blur-lg before:bg-gradient-to-t before:from-Accent before:to-transparent before:-z-10",
+            "after:content[''] after:w-full after:h-full after:absolute relative after:top-[5px] after:left-[5px] after:rounded-full after:blur-lg after:bg-gradient-to-t after:from-transparent after:to-Accent"
+          )}
+        >
+          Start Drawing <IconPencilBolt />
+        </Link>
+        <Link
+          href="/"
+          className={clsx(
+            "text-Secondary-Text font-medium cursor-pointer text-lg flex items-center gap-2 border-[6px] z-[2] border-white/50 bg-clip-padding rounded-full px-10 py-3 bg-no-repeat bg-transparent",
+            "before:content[''] before:w-full before:h-full before:absolute relative before:top-[5px] before:left-[5px] before:rounded-full before:blur-lg before:bg-gradient-to-t before:from-Accent before:to-transparent before:-z-10",
+            "after:content[''] after:w-full after:h-full after:absolute relative after:top-[5px] after:left-[5px] after:rounded-full after:blur-lg after:bg-gradient-to-t after:from-transparent after:to-Accent"
+          )}
+        >
+          Try a Demo <IconPlayerPlay />
+        </Link>
+      </div>
+
+      <div className="absolute bottom-[20px] cursor-pointer left-1/2 -translate-1/2 px-4 py-2 rounded-full bg-Secondary-Text/45 hover:bg-Secondary-Text/55 transition-all backdrop-blur-lg text-white flex items-center gap-2 ">
+        <IconTrophy />
+        Leaderboard
+      </div>
+      <Image
+        src={"/heroicons/illustration1.svg"}
+        alt="Illustration of brush and paint"
+        width={180}
+        height={180}
+        className="absolute top-8/10 left-8/10 -translate-1/2"
+      />
+      <Image
+        src={"/heroicons/illustration2.svg"}
+        alt="Illustration of brush and paint"
+        width={180}
+        height={180}
+        className="absolute top-2/10 left-9/10 -translate-1/2"
+      />
+      <Image
+        src={"/heroicons/illustration3.svg"}
+        alt="Illustration of brush and paint"
+        width={180}
+        height={180}
+        className="absolute top-8/10 left-2/10 -translate-1/2"
+      />
+      <Image
+        src={"/heroicons/illustration4.svg"}
+        alt="Illustration of brush and paint"
+        width={180}
+        height={180}
+        className="absolute top-2/10 left-1/10 -translate-1/2"
+      />
+    </section>
   );
 }
