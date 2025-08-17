@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { dmsans } from "./ui/fonts";
+import Providers from "@/components/Providers";
 
 export const metadata: Metadata = {
   title: "DoodleSquad",
@@ -14,7 +15,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${dmsans.className}`}>{children}</body>
+      <body className={`${dmsans.className}`}>
+        <Providers>
+          {children}
+        </Providers>
+      </body>
     </html>
   );
 }
