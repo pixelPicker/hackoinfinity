@@ -12,7 +12,7 @@ export const ImageModal: React.FC<ImageModalProps> = ({ selectedImg, onClose }) 
   return (
     <div className="fixed inset-0 bg-black/95 flex justify-center items-center z-50 p-4">
       <button
-        className="absolute top-6 right-6 text-white hover:text-gray-300 transition-colors z-10"
+        className="absolute top-6 right-6 text-white cursor-pointer hover:text-gray-300 transition-colors z-10"
         onClick={onClose}
       >
         <X size={32} />
