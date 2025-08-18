@@ -11,7 +11,7 @@ import {
 
 export default function Home() {
   return (
-    <div className="min-h-screen w-full bg-white relative">
+    <div className="min-h-screen w-full bg-[#fff8f0] relative">
       <div className="absolute top-1/15 left-1/2 -translate-1/2"><Logo /></div>
       <div
         className="absolute inset-0 z-0"
@@ -70,7 +70,7 @@ function Hero() {
 
       <div className="absolute bottom-[20px] cursor-pointer left-1/2 -translate-1/2 px-4 py-2 rounded-full bg-Secondary-Text/45 hover:bg-Secondary-Text/55 transition-all backdrop-blur-lg text-white flex items-center gap-2 ">
         <IconTrophy />
-        Leaderboard
+        <Link href="/leaderboard">Leaderboard</Link>
       </div>
       <Image
         src={"/heroicons/illustration1.svg"}
