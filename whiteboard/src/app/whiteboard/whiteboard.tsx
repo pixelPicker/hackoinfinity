@@ -1,23 +1,26 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Stage } from "react-konva";
 import Konva from "konva";
 import { KonvaEventObject } from "konva/lib/Node";
 import { useWhiteBoardStore } from "./_store/whiteboardStore";
-import { CanvasObjectType } from "./types";
+import { CanvasObjectType, ShapeName } from "./types";
 import InkLayer from "./inkLayer";
 import ZoomToolbar from "./zoomToolbar";
 import { useInkStore } from "./_store/inkStore";
 import { useEraserStore } from "./_store/eraserStore";
-
-// import InkLayer from "./layers/InkLayer";
-// import ShapeLayer from "./layers/ShapeLayer";
-// import TextLayer from "./layers/TextLayer";
-// import Toolbar from "./Toolbar";
-// import ConfirmationDialog from "./ConfirmationDialog";
-// import SidePanel from "./SidePanel";
-// import ZoomToolbar from "./ZoomToolbar";
+import ShapeLayer from "./shapeLayer";
+import {
+  getFontStyleStringFromTextStyleArray,
+  getTextDecorationStringFromTextStyleArray,
+  TEXT_DEFAULT_HEIGHT,
+  TEXT_DEFAULT_WIDTH,
+} from "./_text/utils";
+import { useTextStore } from "./_store/textStore";
+import { useShapeStore } from "./_store/shapeStore";
+import { SHAPE_DEFAULT_HEIGHT, SHAPE_DEFAULT_WIDTH } from "./_shapes/utils";
+import TextLayer from "./textLayer";
 
 const WhiteBoard = ({
   boardRef,
@@ -31,20 +34,149 @@ const WhiteBoard = ({
   const {
     selectedTool,
     selectedObjectId,
+    undo,
+    redo,
     canvasObjects,
     addCanvasObject,
     updateCanvasObject,
     selectCanvasObject,
+    deleteCanvasObject,
+    resetCanvas,
   } = useWhiteBoardStore();
-  const { inkColor, inkWidth, setInkColor, setInkWidth } = useInkStore(
-    (s) => s
-  );
-  const { eraserSize, setEraserSize } = useEraserStore((s) => s);
+  const { inkColor, inkWidth } = useInkStore((s) => s);
+  const { eraserSize } = useEraserStore((s) => s);
+  const {
+    textColor,
+    textSize,
+    lineSpacing,
+    setLineSpacing,
+    setTextAlignment,
+    setTextColor,
+    setTextSize,
+    setTextStyle,
+    textAlignment,
+    textStyle,
+  } = useTextStore((s) => s);
+  const {
+    borderColor,
+    borderWidth,
+    fillColor,
+    setBorderColor,
+    setBorderWidth,
+    setFillColor,
+  } = useShapeStore((s) => s);
+
+  const handleDelete = useCallback(() => {
+    if (selectedObjectId) {
+      deleteCanvasObject(selectedObjectId);
+    }
+  }, [selectedObjectId, canvasObjects]);
+
+  const resetCanvasState = useCallback(() => {
+    resetCanvas();
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (
+        event.key === "Delete" || // Del for Windows/Linux
+        (event.metaKey && event.key === "Backspace") // Cmd+delete for macOS
+      ) {
+        handleDelete();
+      } else if (
+        (event.ctrlKey && event.key === "z") || // Ctrl+Z for Windows/Linux
+        (event.metaKey && event.key === "z" && !event.shiftKey) // Cmd+Z for macOS
+      ) {
+        undo();
+      } else if (
+        (event.ctrlKey && event.key === "y") || // Ctrl+Y for Windows/Linux
+        (event.metaKey && event.shiftKey && event.key === "z") // Cmd+Shift+Z for macOS
+      ) {
+        redo();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [handleDelete]);
+
+  const addTextField = (x: number, y: number) => {
+    // dispatch(setIsSidePanelOpen(true));
+
+    const newObjectId = crypto.randomUUID();
+    let newObject: CanvasObjectType = {
+      id: newObjectId,
+      type: "text" as const,
+      x: x,
+      y: y,
+      width: TEXT_DEFAULT_WIDTH,
+      height: TEXT_DEFAULT_HEIGHT,
+      fill: textColor,
+      text: "Double click to edit.",
+      fontSize: textSize,
+      align: textAlignment,
+      lineHeight: lineSpacing,
+      fontStyle: getFontStyleStringFromTextStyleArray(textStyle),
+      textDecoration: getTextDecorationStringFromTextStyleArray(textStyle),
+      fontFamily: "Arial",
+    };
+
+    setNewObject(newObject);
+    selectCanvasObject(newObjectId);
+  };
+
+  const addShape = (shapeName: ShapeName, x: number, y: number) => {
+    // dispatch(setIsSidePanelOpen(true));
+    const newShapeId = crypto.randomUUID();
+    const baseShape = {
+      id: newShapeId,
+      shapeName,
+      type: "shape" as const,
+      strokeWidth: borderWidth,
+      stroke: borderColor,
+      fill: fillColor,
+      x: x,
+      y: y,
+      width: SHAPE_DEFAULT_WIDTH,
+      height: SHAPE_DEFAULT_HEIGHT,
+    }; // common shape properties
+
+    let newShape: CanvasObjectType;
+    switch (shapeName) {
+      case "rectangle":
+        newShape = {
+          ...baseShape,
+        };
+        break;
+      case "oval":
+        newShape = {
+          ...baseShape,
+        };
+        break;
+      case "triangle":
+        newShape = {
+          ...baseShape,
+          height: 43.3, // equilateral triangle
+        };
+        break;
+      case "star":
+        newShape = {
+          ...baseShape,
+        };
+        break;
+      default:
+        console.warn(`Unknown shapeName: ${shapeName}`);
+        return;
+    }
+
+    setNewObject(newShape);
+    selectCanvasObject(newShapeId);
+  };
 
   const [isInProgress, setIsInProgress] = useState(false);
-  /** =====================
-   * Mouse Handlers
-   * ===================== */
+
   const handleMouseDown = (e: any) => {
     if (!selectedObjectId) {
       setIsInProgress(true);
@@ -53,61 +185,22 @@ const WhiteBoard = ({
         const pos = e.target.getStage().getRelativePointerPosition();
         const { x, y } = pos;
 
+        // Add new object based on tool
         switch (selectedTool) {
           case "addText":
-            setNewObject({
-              id: crypto.randomUUID(),
-              type: "text",
-              text: "New text",
-              x,
-              y,
-              width: 100,
-              height: 30,
-            });
+            addTextField(x, y);
             break;
           case "addRectangle":
-            setNewObject({
-              id: crypto.randomUUID(),
-              type: "shape",
-              shapeName: "rectangle",
-              x,
-              y,
-              width: 0,
-              height: 0,
-            });
+            addShape("rectangle", x, y);
             break;
           case "addOval":
-            setNewObject({
-              id: crypto.randomUUID(),
-              type: "shape",
-              shapeName: "oval",
-              x,
-              y,
-              width: 0,
-              height: 0,
-            });
+            addShape("oval", x, y);
             break;
           case "addTriangle":
-            setNewObject({
-              id: crypto.randomUUID(),
-              type: "shape",
-              shapeName: "triangle",
-              x,
-              y,
-              width: 0,
-              height: 0,
-            });
+            addShape("triangle", x, y);
             break;
           case "addStar":
-            setNewObject({
-              id: crypto.randomUUID(),
-              type: "shape",
-              shapeName: "star",
-              x,
-              y,
-              width: 0,
-              height: 0,
-            });
+            addShape("star", x, y);
             break;
           default:
             console.warn(`Unknown tool: ${selectedTool}`);
@@ -122,7 +215,7 @@ const WhiteBoard = ({
           id: crypto.randomUUID(),
           type: selectedTool === "eraser" ? "eraserStroke" : "ink",
           points: [pos.x, pos.y],
-          stroke: inkColor,
+          stroke: selectedTool === "eraser" ? inkColor : inkColor,
           strokeWidth: selectedTool === "eraser" ? eraserSize : inkWidth,
         });
       }
@@ -221,24 +314,23 @@ const WhiteBoard = ({
       >
         <InkLayer objects={canvasObjects} newObject={newObject} />
 
-        {/* <ShapeLayer
+        <ShapeLayer
           objects={canvasObjects}
           newObject={newObject}
           selectedObjectId={selectedObjectId}
           setSelectedObjectId={selectCanvasObject}
           onChange={updateCanvasObject}
-        /> */}
-        {/* <TextLayer
+        />
+        <TextLayer
           objects={canvasObjects}
           newObject={newObject}
           selectedObjectId={selectedObjectId}
           setSelectedObjectId={selectCanvasObject}
           onChange={updateCanvasObject}
           zoomLevel={zoomLevel}
-        /> */}
+        />
       </Stage>
 
-      {/* <Toolbar objects={canvasObjects} onDelete={resetCanvas} /> */}
       {/* <ConfirmationDialog
         open={false}
         onClose={() => {}}
@@ -253,6 +345,7 @@ const WhiteBoard = ({
         setZoomLevel={setZoomLevel}
         stageRef={stageRef}
       />
+      <div className="fixed top-1/2 left-1/2 "></div>
     </>
   );
 };

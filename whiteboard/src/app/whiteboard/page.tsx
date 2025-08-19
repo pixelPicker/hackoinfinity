@@ -1,5 +1,11 @@
 "use client";
-import { IconMinus, IconPlayerPlay, IconCircleDashedPlus, IconUsers, IconPlus } from "@tabler/icons-react";
+import {
+  IconMinus,
+  IconPlayerPlay,
+  IconCircleDashedPlus,
+  IconUsers,
+  IconPlus,
+} from "@tabler/icons-react";
 import clsx from "clsx";
 import dynamic from "next/dynamic";
 import Link from "next/link";
@@ -22,20 +28,8 @@ export default function App() {
 
   return (
     <main className="w-screen h-screen bg-Surface relative">
-      {/* <section>Chat</section>
-      <section>Room details</section>
-      <section>Undo Redo</section> */}    
-      <Whiteboard
-        scale={scale}
-        handleScaleGrow={handleScaleGrow}
-        handleScaleShrink={handleScaleShrink}
-      />
-      <ToolBar />
-      <WhiteBoardScale
-        scale={scale}
-        handleScaleGrow={handleScaleGrow}
-        handleScaleShrink={handleScaleShrink}
-      />
+      <Whiteboard boardRef={whiteboardRef} />
+      <ToolBar boardRef={whiteboardRef} />
     </main>
   );
 }
