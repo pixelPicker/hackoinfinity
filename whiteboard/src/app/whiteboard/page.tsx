@@ -1,7 +1,13 @@
-  "use client";
+"use client";
+
 import { IconMinus, IconPlus } from "@tabler/icons-react";
 import dynamic from "next/dynamic";
 import React, { useRef, useState } from "react";
+import { useWhiteBoardStore } from "./_store/whiteboardStore";
+import WhiteBoardScale from "./scale";
+import { KonvaNodeComponent, StageProps } from "react-konva";
+import { Stage } from "konva/lib/Stage";
+import Konva from "konva";
 
 const Whiteboard = dynamic(() => import("./whiteboard"), {
   ssr: false,
@@ -11,51 +17,16 @@ const ToolBar = dynamic(() => import("./toolbar"), {
 });
 
 export default function App() {
-  const [scale, setScale] = useState(1);
-
-  const handleScaleGrow = () => {
-    if (scale > 2) return;
-    setScale((prev) => parseFloat((prev + 0.1).toFixed(1)));
-  };
-  const handleScaleShrink = () => {
-    if (scale < 0.5) return;
-    setScale((prev) => parseFloat((prev - 0.1).toFixed(1)));
-  };
+  const whiteboardRef = useRef<Konva.Stage>(null);
 
   return (
-    <main className="w-screen h-screen bg-[#454545] relative">
+    <main className="w-screen h-screen bg-Surface relative">
       {/* <section>Chat</section>
       <section>Room details</section>
-      <section>Undo Redo</section> */}
-      <Whiteboard
-        scale={scale}
-        handleScaleGrow={handleScaleGrow}
-        handleScaleShrink={handleScaleShrink}
-      />
-      <ToolBar />
-      <WhiteBoardScale
-        scale={scale}
-        handleScaleGrow={handleScaleGrow}
-        handleScaleShrink={handleScaleShrink}
-      />
+      */}
+      <Whiteboard boardRef={whiteboardRef} />
+      <ToolBar boardRef={whiteboardRef} />
+      {/* <WhiteBoardScale /> */}
     </main>
-  );
-}
-
-function WhiteBoardScale({
-  scale,
-  handleScaleGrow,
-  handleScaleShrink,
-}: {
-  scale: number;
-  handleScaleGrow: () => void;
-  handleScaleShrink: () => void;
-}) {
-  return (
-    <div className="p-1 bg-Surface rounded-sm absolute bottom-[10px] right-[10px] border-[1px] border-Accent flex items-center gap-4">
-      <IconMinus size={16} onClick={handleScaleShrink} />
-      <span className="w-7 text-center">{scale}</span>
-      <IconPlus size={16} onClick={handleScaleGrow} />
-    </div>
   );
 }
