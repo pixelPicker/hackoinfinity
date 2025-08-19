@@ -13,7 +13,7 @@ interface WhiteboardState {
   canvasObjects: CanvasObjectType[];
   setCanvasObjects: (objects: CanvasObjectType[]) => void;
   addCanvasObject: (object: CanvasObjectType) => void;
-  updateCanvasObject: (id: string, updates: Partial<CanvasObjectType>) => void;
+  updateCanvasObject: (id: string | null, updates: Partial<CanvasObjectType>) => void;
   deleteCanvasObject: (id: string) => void;
   selectCanvasObject: (id: string) => void;
   resetCanvas: () => void;

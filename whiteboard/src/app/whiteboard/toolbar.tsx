@@ -17,6 +17,12 @@ import {
   IconColorPicker,
   IconMinus,
   IconPlus,
+  IconAlignLeft,
+  IconAlignCenter,
+  IconAlignRight,
+  IconBold,
+  IconItalic,
+  IconUnderline,
 } from "@tabler/icons-react";
 import { useWhiteBoardStore } from "./_store/whiteboardStore";
 import Konva from "konva";
@@ -26,6 +32,7 @@ import clsx from "clsx";
 import MyColorPicker from "./colorPicker";
 import { useShapeStore } from "./_store/shapeStore";
 import { presetColors } from "./_shapes/utils";
+import { useTextStore } from "./_store/textStore";
 
 export default function ToolBar({
   boardRef,
@@ -55,10 +62,7 @@ export default function ToolBar({
 
       <PenSelector />
 
-      <IconTextCaption
-        className="cursor-pointer hover:text-blue-500"
-        onClick={() => setSelectedTool("addText")}
-      />
+      <TextSelector />
 
       <ShapeSelector />
 
@@ -279,6 +283,123 @@ function PenSelector() {
           isOpen={showColorPicker}
           toggleOpen={(isOpen) => setShowColorPicker(isOpen)}
         />
+      )}
+    </div>
+  );
+}
+
+function TextSelector() {
+  const [showTextPanel, setShowTextPanel] = useState(false);
+  const {
+    selectedTool,
+    setSelectedTool,
+    selectedObjectId,
+    updateCanvasObject,
+  } = useWhiteBoardStore((s) => s);
+  const {
+    lineSpacing,
+    setLineSpacing,
+    setTextAlignment,
+    setTextColor,
+    setTextSize,
+    setTextStyle,
+    textAlignment,
+    textColor,
+    textSize,
+    textStyle,
+  } = useTextStore((s) => s);
+
+  return (
+    <div className="relative">
+      <IconTextCaption
+        className={clsx(
+          "cursor-pointer hover:text-blue-500",
+          selectedTool === "addText" && "text-blue-500"
+        )}
+        onClick={() => {
+          setSelectedTool("addText");
+          setShowTextPanel((prev) => !prev);
+        }}
+      />
+      {showTextPanel && (
+        <div className="absolute top-10 left-0 bg-white shadow-md rounded-lg p-3 flex gap-3">
+          <div className="flex flex-col gap-2 w-60">
+            <div className="flex items-center justify-between gap-2">
+              <label className="text-sm text-gray-600">Text size:</label>
+              <input
+                type="range"
+                min={1}
+                max={100}
+                defaultValue={textSize}
+                onChange={(e) => {
+                  setTextSize(parseInt(e.target.value));
+                  updateCanvasObject(selectedObjectId, {
+                    fontSize: parseInt(e.target.value),
+                  });
+                }}
+                className="accent-blue-500 w-43"
+              />
+            </div>
+
+            <div className="flex items-center justify-between gap-2">
+              <label className="text-sm text-gray-600">Line height:</label>
+              <input
+                type="range"
+                min={0}
+                max={5}
+                defaultValue={lineSpacing}
+                onChange={(e) => {
+                  setLineSpacing(parseInt(e.target.value));
+                  updateCanvasObject(selectedObjectId, {
+                    lineHeight: parseInt(e.target.value),
+                  });
+                }}
+                className="accent-blue-500 w-43"
+              />
+            </div>
+
+            <div className="flex justify-between items-center gap-2">
+              <label className="text-sm text-gray-600">Text color:</label>
+              <input
+                type="text"
+                value={textColor}
+                onChange={(e) => {
+                  setTextColor(e.target.value);
+                  updateCanvasObject(selectedObjectId, {
+                    fill: e.target.value,
+                  });
+                }}
+                className="border rounded px-2 py-1 text-sm w-37"
+              />
+            </div>
+
+            <div>
+              <p className="text-sm text-gray-600 pb-2">Alignment:</p>
+              <div className="flex items-center justify-between gap-2 px-10">
+                <IconAlignLeft
+                  onClick={() => {
+                    setTextAlignment("left");
+                    updateCanvasObject(selectedObjectId, { align: "left" });
+                  }}
+                />
+                <span className="h-full w-[1px]"></span>
+                <IconAlignLeft
+                  onClick={() => {
+                    setTextAlignment("center");
+                    updateCanvasObject(selectedObjectId, { align: "center" });
+                  }}
+                />
+                <span className="h-full w-[1px]"></span>
+                <IconAlignLeft
+                  onClick={() => {
+                    setTextAlignment("right");
+                    updateCanvasObject(selectedObjectId, { align: "right" });
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
