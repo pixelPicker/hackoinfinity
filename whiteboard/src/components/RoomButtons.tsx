@@ -1,16 +1,13 @@
+// src/components/RoomButtons.tsx
 "use client";
-import {
-  IconCircleDashedPlus,
-  IconUsers,
-  IconX,
-  IconCopy,
-} from "@tabler/icons-react";
+
+import { IconCircleDashedPlus, IconUsers, IconX, IconCopy } from "@tabler/icons-react";
 import clsx from "clsx";
 import React, { useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
-const Page = () => {
+const RoomButtons: React.FC = () => {
   const { data: session } = useSession();
   const router = useRouter();
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -22,7 +19,6 @@ const Page = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Reset all state when closing modals
   const resetState = () => {
     setShowCreateModal(false);
     setShowJoinModal(false);
@@ -34,38 +30,28 @@ const Page = () => {
     setLoading(false);
   };
 
-  // Check authentication before showing modals
   const handleCreateRoom = async () => {
-    // Reset state first
     resetState();
-
     if (!session) {
       setShowAuthModal(true);
       return;
     }
-
     setLoading(true);
     try {
       const code = Math.random().toString(36).substr(2, 6).toUpperCase();
-
-      // Create room in database
       const response = await fetch("/api/rooms/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          roomCode: code,
-        }),
+        body: JSON.stringify({ roomCode: code }),
       });
-
       const data = await response.json();
-
       if (response.ok) {
         setRoomCode(code);
         setShowCreateModal(true);
       } else {
         setError(data.error || "Failed to create room");
       }
-    } catch (error) {
+    } catch {
       setError("Failed to create room");
     } finally {
       setLoading(false);
@@ -73,9 +59,7 @@ const Page = () => {
   };
 
   const handleJoinRoomClick = () => {
-    // Reset state first
     resetState();
-
     if (!session) {
       setShowAuthModal(true);
       return;
@@ -83,43 +67,34 @@ const Page = () => {
     setShowJoinModal(true);
   };
 
-  // Copy code to clipboard
   const copyToClipboard = async () => {
     try {
       await navigator.clipboard.writeText(roomCode);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error("Failed to copy:", err);
+    } catch {
+      /* ignore */
     }
   };
 
-  // Handle join room with database validation
-  const handleJoinRoom = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleJoinRoom = async (e: React.FormEvent) => {
     e.preventDefault();
     if (joinCode.length !== 6) return;
-
     setLoading(true);
     setError("");
-
     try {
       const response = await fetch("/api/rooms/join", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          roomCode: joinCode,
-        }),
+        body: JSON.stringify({ roomCode: joinCode }),
       });
-
       const data = await response.json();
-
       if (response.ok) {
-        // Navigate to whiteboard with room code
         router.push(`/whiteboard?room=${joinCode}`);
       } else {
         setError(data.error || "Room not found");
       }
-    } catch (error) {
+    } catch {
       setError("Failed to join room");
     } finally {
       setLoading(false);
@@ -132,7 +107,8 @@ const Page = () => {
 
   return (
     <>
-      <div className="mt-8 flex gap-4 absolute top-[10px] left-[10px] flex-col">
+      {/* Buttons */}
+      <div className="mt-8 flex gap-4">
         <button
           onClick={handleCreateRoom}
           disabled={loading}
@@ -170,7 +146,6 @@ const Page = () => {
             >
               <IconX size={20} />
             </button>
-
             <div className="text-center">
               <div className="mx-auto h-16 w-16 bg-[var(--accent)] rounded-full flex items-center justify-center mb-6">
                 <IconUsers className="text-2xl text-[var(--primary-text)]" />
@@ -181,7 +156,6 @@ const Page = () => {
               <p className="text-[var(--secondary-text)] mb-6">
                 You need to be logged in to create or join a room.
               </p>
-
               <div className="flex gap-3">
                 <button
                   onClick={resetState}
@@ -211,7 +185,6 @@ const Page = () => {
             >
               <IconX size={20} />
             </button>
-
             <div className="text-center">
               <div className="mb-6">
                 <div className="mx-auto h-16 w-16 bg-[var(--accent)] rounded-full flex items-center justify-center mb-4">
@@ -224,7 +197,6 @@ const Page = () => {
                   Share this code with others to join your room
                 </p>
               </div>
-
               <div className="bg-[var(--surface)] rounded-2xl p-6 mb-6 border-2 border-[var(--accent)]">
                 <div className="text-3xl font-mono font-bold text-[var(--primary-text)] mb-3 tracking-wider">
                   {roomCode}
@@ -237,7 +209,6 @@ const Page = () => {
                   {copied ? "Copied!" : "Copy Code"}
                 </button>
               </div>
-
               <button
                 onClick={handleStartRoom}
                 className="w-full px-6 py-3 bg-[var(--accent)] text-[var(--primary-text)] rounded-2xl hover:bg-[var(--accent-dark)] transition-colors font-medium border-3 border-[var(--accent)]"
@@ -259,7 +230,6 @@ const Page = () => {
             >
               <IconX size={20} />
             </button>
-
             <div className="text-center">
               <div className="mb-6">
                 <div className="mx-auto h-16 w-16 bg-[var(--accent)] rounded-full flex items-center justify-center mb-4">
@@ -272,27 +242,21 @@ const Page = () => {
                   Enter the 6-digit room code to join
                 </p>
               </div>
-
               <form onSubmit={handleJoinRoom} className="space-y-6">
                 <div>
                   <input
                     type="text"
                     value={joinCode}
-                    onChange={(e) =>
-                      setJoinCode(e.target.value.toUpperCase().slice(0, 6))
-                    }
+                    onChange={(e) => setJoinCode(e.target.value.toUpperCase().slice(0, 6))}
                     placeholder="Enter room code"
                     className="w-full px-4 py-3 text-center text-2xl font-mono font-bold tracking-wider border-3 border-[var(--accent)] rounded-2xl focus:outline-none focus:ring-4 focus:ring-[var(--accent)] bg-white text-[var(--primary-text)]"
                     maxLength={6}
                     autoFocus
                   />
                   {error && (
-                    <p className="mt-2 text-sm text-red-500 bg-red-50 p-2 rounded-xl">
-                      {error}
-                    </p>
+                    <p className="mt-2 text-sm text-red-500 bg-red-50 p-2 rounded-xl">{error}</p>
                   )}
                 </div>
-
                 <div className="flex gap-3">
                   <button
                     type="button"
@@ -318,4 +282,4 @@ const Page = () => {
   );
 };
 
-export default Page;
+export default RoomButtons;
