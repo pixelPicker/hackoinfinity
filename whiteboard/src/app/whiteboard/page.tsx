@@ -26,7 +26,7 @@ export default function App() {
       */}
       <Whiteboard boardRef={whiteboardRef} />
       <ToolBar boardRef={whiteboardRef} />
-      <WhiteBoardScale />
+      {/* <WhiteBoardScale /> */}
     </main>
   );
 }

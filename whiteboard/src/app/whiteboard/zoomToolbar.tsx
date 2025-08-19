@@ -27,7 +27,6 @@ export default function ZoomToolbar({
     setInputValue((zoomLevel * 100).toFixed(0));
   }, [zoomLevel]);
 
-  // Zoom in
   const handleZoomIn = () => {
     const stage = stageRef.current;
     if (stage) {
@@ -49,7 +48,6 @@ export default function ZoomToolbar({
     }
   };
 
-  // Zoom out
   const handleZoomOut = () => {
     const stage = stageRef.current;
     if (stage) {
@@ -74,7 +72,6 @@ export default function ZoomToolbar({
     }
   };
 
-  // Allow any value while typing
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(e.target.value);
   };
@@ -83,7 +80,6 @@ export default function ZoomToolbar({
     applyZoom();
   };
 
-  // Handle Enter key press
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       applyZoom();
@@ -121,67 +117,6 @@ export default function ZoomToolbar({
     }
   };
 
-  // Fit to canvas
-  const handleFit = () => {
-    const stage = stageRef.current;
-    if (stage) {
-      const layers = stage.getLayers();
-      let minX = Infinity;
-      let minY = Infinity;
-      let maxX = -Infinity;
-      let maxY = -Infinity;
-
-      // Find the bounding box of all layers
-      layers.forEach((layer) => {
-        const layerRect = layer.getClientRect({ relativeTo: stage });
-        const { x, y, width, height } = layerRect;
-        if (width > 0 && height > 0) {
-          minX = Math.min(minX, x);
-          minY = Math.min(minY, y);
-          maxX = Math.max(maxX, x + width);
-          maxY = Math.max(maxY, y + height);
-        }
-      });
-
-      const contentWidth = maxX - minX;
-      const contentHeight = maxY - minY;
-
-      if (contentWidth > 0 && contentHeight > 0) {
-        // Calculate new scale
-        const windowWidth = window.innerWidth;
-        const windowHeight = window.innerHeight;
-        const scaleX = windowWidth / contentWidth;
-        const scaleY = windowHeight / contentHeight;
-        const scaleValue = Math.min(scaleX, scaleY) * 0.9; // Leave some padding
-
-        const newScale = Math.max(0.1, Math.min(scaleValue, 3)); // Limit the zoom range
-
-        // Calculate the center of the content and the window
-        const contentCenter = {
-          x: (minX + maxX) / 2,
-          y: (minY + maxY) / 2,
-        };
-
-        const windowCenter = {
-          x: windowWidth / 2,
-          y: windowHeight / 2,
-        };
-
-        // Calculate new position to center the content in the window
-        const newPos = {
-          x: windowCenter.x - contentCenter.x * newScale,
-          y: windowCenter.y - contentCenter.y * newScale,
-        };
-        // Move the stage with animation
-        moveStage(stage, newPos, newScale, 0.1);
-      } else {
-        // Reset to original scale if no valid content
-        moveStage(stage, { x: 0, y: 0 }, 1);
-      }
-    }
-  };
-
-  // Animation
   const moveStage = (
     stage: Konva.Stage,
     offset: { x: number; y: number },
@@ -209,14 +144,17 @@ export default function ZoomToolbar({
   };
 
   return (
-    <>
+    <div className="p-2 bg-gray-300 rounded-lg fixed bottom-[10px] right-[10px] flex items-center gap-4">
       {/* Zoom In */}
       <IconZoomOut onClick={handleZoomOut} />
       {/* Zoom Percentage Input */}
       <div>
         <input
           value={inputValue}
+          className="w-[5ch] text-center outline-none focus-within:outline-none focus:outline-none focus-visible:outline-none"
           type="numberic"
+          max={300}
+          min={0}
           onChange={handleInputChange}
           onBlur={handleInputBlur}
           onKeyDown={handleKeyDown}
@@ -225,7 +163,6 @@ export default function ZoomToolbar({
 
       <IconZoomIn onClick={handleZoomIn} />
 
-      <IconUserScreen onClick={handleFit} />
-    </>
+    </div>
   );
 }
