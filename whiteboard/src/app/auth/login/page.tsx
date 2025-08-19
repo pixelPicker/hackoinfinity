@@ -81,7 +81,7 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
-                <div className="absolute right-3 top-10 text-xl text-[var(--secondary-text)]">
+                <div className="absolute right-3 top-11 text-xl text-[var(--secondary-text)]">
                   <MdEmail />
                 </div>
               </div>
@@ -101,7 +101,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
-                <div className="absolute right-3 top-10 text-xl text-[var(--secondary-text)]">
+                <div className="absolute right-3 top-11 text-xl text-[var(--secondary-text)]">
                   <MdLock />
                 </div>
               </div>
@@ -109,7 +109,7 @@ export default function LoginPage() {
 
             {error && (
               <div className={`text-red-500 text-sm text-center bg-red-50 p-3 rounded-xl border-2 border-red-200 ${dmsans.className}`}>
-                ❌ {error}
+                 {error}
               </div>
             )}
 

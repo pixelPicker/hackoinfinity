@@ -17,11 +17,22 @@ import {
   IconColorPicker,
   IconMinus,
   IconPlus,
+  IconAlignLeft,
+  IconAlignCenter,
+  IconAlignRight,
+  IconBold,
+  IconItalic,
+  IconUnderline,
 } from "@tabler/icons-react";
 import { useWhiteBoardStore } from "./_store/whiteboardStore";
 import Konva from "konva";
 import { useInkStore } from "./_store/inkStore";
 import { useEraserStore } from "./_store/eraserStore";
+import clsx from "clsx";
+import MyColorPicker from "./colorPicker";
+import { useShapeStore } from "./_store/shapeStore";
+import { presetColors } from "./_shapes/utils";
+import { useTextStore } from "./_store/textStore";
 
 export default function ToolBar({
   boardRef,
@@ -33,56 +44,29 @@ export default function ToolBar({
     redo,
     undoStack,
     redoStack,
+    selectedTool,
     setSelectedTool,
     resetCanvas,
     canvasObjects,
   } = useWhiteBoardStore((s) => s);
-  const { inkColor, inkWidth, setInkColor, setInkWidth } = useInkStore(
-    (s) => s
-  );
-  const { eraserSize, setEraserSize } = useEraserStore((s) => s);
-  const [showShapes, setShowShapes] = useState(false);
-  const [showColorPicker, setShowColorPicker] = useState(false);
 
   return (
     <section className="fixed top-[20px] left-1/2 -translate-x-1/2 flex items-center gap-4 bg-white shadow-lg rounded-xl p-3 border border-gray-200">
       <IconArrowsMove
-        className="cursor-pointer hover:text-blue-500"
+        className={clsx(
+          "cursor-pointer hover:text-blue-500",
+          selectedTool === "select" && "text-blue-500"
+        )}
         onClick={() => setSelectedTool("select")}
       />
 
-      <IconPencil
-        className="cursor-pointer hover:text-blue-500"
-        onClick={() => setSelectedTool("pen")}
-      />
+      <PenSelector />
 
-      <div className="relative">
-        <IconColorPicker
-          className="cursor-pointer hover:text-blue-500"
-          onClick={() => setShowColorPicker((prev) => !prev)}
-        />
-        {showColorPicker && (
-          <div className="absolute top-10 left-0 bg-white shadow-md rounded-lg p-3">
-            <input
-              type="color"
-              value={inkColor}
-              onChange={(e) => setInkColor(e.target.value)}
-            />
-          </div>
-        )}
-      </div>
-
-      <IconTextCaption
-        className="cursor-pointer hover:text-blue-500"
-        onClick={() => setSelectedTool("addText")}
-      />
+      <TextSelector />
 
       <ShapeSelector />
 
       <EraserSelector />
-      {/* <div className="relative">
-        <IconEraser className="cursor-pointer hover:text-blue-500" />
-      </div> */}
 
       <IconArrowBackUp
         className={`cursor-pointer ${
@@ -109,51 +93,116 @@ export default function ToolBar({
 
 function ShapeSelector() {
   const [showShapes, setShowShapes] = useState(false);
-  const { setSelectedTool } = useWhiteBoardStore((s) => s);
+  const {
+    borderColor,
+    borderWidth,
+    fillColor,
+    setBorderColor,
+    setBorderWidth,
+    setFillColor,
+  } = useShapeStore((s) => s);
+
+  const { setSelectedTool, selectedTool } = useWhiteBoardStore((s) => s);
   return (
     <div className="relative">
       <IconShape
-        className="cursor-pointer hover:text-blue-500"
+        className={clsx(
+          "cursor-pointer hover:text-blue-500",
+          selectedTool.includes("add") &&
+            selectedTool !== "addText" &&
+            "text-blue-500"
+        )}
         onClick={() => setShowShapes((prev) => !prev)}
       />
+
       {showShapes && (
-        <div className="absolute top-10 left-0 bg-white shadow-md rounded-lg p-3 flex gap-4">
-          <IconRectangle
-            className="cursor-pointer hover:text-blue-500"
-            onClick={() => {
-              setSelectedTool("addRectangle");
-              setShowShapes(false);
-            }}
-          >
-            Rectangle
-          </IconRectangle>
-          <IconCircle
-            className="cursor-pointer hover:text-blue-500"
-            onClick={() => {
-              setSelectedTool("addOval");
-              setShowShapes(false);
-            }}
-          >
-            Circle
-          </IconCircle>
-          <IconTriangle
-            className="cursor-pointer hover:text-blue-500"
-            onClick={() => {
-              setSelectedTool("addTriangle");
-              setShowShapes(false);
-            }}
-          >
-            Triangle
-          </IconTriangle>
-          <IconStar
-            className="cursor-pointer hover:text-blue-500"
-            onClick={() => {
-              setSelectedTool("addStar");
-              setShowShapes(false);
-            }}
-          >
-            Star
-          </IconStar>
+        <div className="absolute top-10 left-0 bg-white shadow-md rounded-lg p-3 flex flex-col justify-between gap-4 w-60">
+          <div className="flex justify-between">
+            <IconRectangle
+              className={clsx(
+                "cursor-pointer hover:text-blue-500",
+                selectedTool === "addRectangle" && "text-blue-500"
+              )}
+              onClick={() => {
+                setSelectedTool("addRectangle");
+                setShowShapes(false);
+              }}
+            >
+              Rectangle
+            </IconRectangle>
+            <IconCircle
+              className={clsx(
+                "cursor-pointer hover:text-blue-500",
+                selectedTool === "addOval" && "text-blue-500"
+              )}
+              onClick={() => {
+                setSelectedTool("addOval");
+                setShowShapes(false);
+              }}
+            >
+              Circle
+            </IconCircle>
+            <IconTriangle
+              className={clsx(
+                "cursor-pointer hover:text-blue-500",
+                selectedTool === "addTriangle" && "text-blue-500"
+              )}
+              onClick={() => {
+                setSelectedTool("addTriangle");
+                setShowShapes(false);
+              }}
+            >
+              Triangle
+            </IconTriangle>
+            <IconStar
+              className={clsx(
+                "cursor-pointer hover:text-blue-500",
+                selectedTool === "addStar" && "text-blue-500"
+              )}
+              onClick={() => {
+                setSelectedTool("addStar");
+                setShowShapes(false);
+              }}
+            >
+              Star
+            </IconStar>
+          </div>
+          <hr />
+          <div className="flex flex-col gap-2">
+            <div className="flex justify-between items-center gap-2">
+              <label className="text-sm text-gray-600">Fill color:</label>
+              <hr />
+              <input
+                type="text"
+                value={fillColor}
+                onChange={(e) => setFillColor(e.target.value)}
+                className="border rounded px-2 py-1 text-sm w-37"
+              />
+            </div>
+
+            <div className="flex justify-between items-center gap-2">
+              <label className="text-sm text-gray-600">Border color:</label>
+              <hr />
+              <input
+                type="text"
+                value={borderColor}
+                onChange={(e) => setBorderColor(e.target.value)}
+                className="border rounded px-2 py-1 text-sm w-37"
+              />
+            </div>
+
+            <div className="flex items-center justify-between gap-2">
+              <label className="text-sm text-gray-600">Border size:</label>
+              <input
+                type="range"
+                min={1}
+                max={10}
+                defaultValue={borderWidth}
+                onChange={(e) => setBorderWidth(parseInt(e.target.value))}
+                className="accent-blue-500 w-37"
+              />
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -161,6 +210,7 @@ function ShapeSelector() {
 }
 
 function EraserSelector() {
+  const { setSelectedTool, selectedTool } = useWhiteBoardStore((s) => s);
   const [showEraser, setShowEraser] = useState(false);
   const { eraserSize, setEraserSize } = useEraserStore((s) => s);
 
@@ -180,12 +230,17 @@ function EraserSelector() {
   return (
     <div className="relative">
       <IconEraser
-        className="cursor-pointer hover:text-blue-500"
-        onClick={() => setShowEraser((prev) => !prev)}
+        className={clsx(
+          "cursor-pointer hover:text-blue-500",
+          selectedTool === "eraser" && "text-blue-500"
+        )}
+        onClick={() => {
+          setShowEraser((prev) => !prev);
+          setSelectedTool("eraser");
+        }}
       />
       {showEraser && (
         <div className="absolute top-10 left-0 bg-white shadow-md rounded-lg p-3 flex gap-3">
-          {/* Zoom Out */}
           <IconMinus
             className="cursor-pointer"
             onClick={handleEraserSizeMinus}
@@ -201,6 +256,149 @@ function EraserSelector() {
             />
           </div>
           <IconPlus className="cursor-pointer" onClick={handleEraserSizePlus} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PenSelector() {
+  const [showColorPicker, setShowColorPicker] = useState(false);
+  const { selectedTool, setSelectedTool } = useWhiteBoardStore((s) => s);
+
+  return (
+    <div className="relative">
+      <IconPencil
+        className={clsx(
+          "cursor-pointer hover:text-blue-500",
+          selectedTool === "pen" && "text-blue-500"
+        )}
+        onClick={() => {
+          setShowColorPicker((prev) => !prev);
+          setSelectedTool("pen");
+        }}
+      />
+      {showColorPicker && (
+        <MyColorPicker
+          isOpen={showColorPicker}
+          toggleOpen={(isOpen) => setShowColorPicker(isOpen)}
+        />
+      )}
+    </div>
+  );
+}
+
+function TextSelector() {
+  const [showTextPanel, setShowTextPanel] = useState(false);
+  const {
+    selectedTool,
+    setSelectedTool,
+    selectedObjectId,
+    updateCanvasObject,
+  } = useWhiteBoardStore((s) => s);
+  const {
+    lineSpacing,
+    setLineSpacing,
+    setTextAlignment,
+    setTextColor,
+    setTextSize,
+    setTextStyle,
+    textAlignment,
+    textColor,
+    textSize,
+    textStyle,
+  } = useTextStore((s) => s);
+
+  return (
+    <div className="relative">
+      <IconTextCaption
+        className={clsx(
+          "cursor-pointer hover:text-blue-500",
+          selectedTool === "addText" && "text-blue-500"
+        )}
+        onClick={() => {
+          setSelectedTool("addText");
+          setShowTextPanel((prev) => !prev);
+        }}
+      />
+      {showTextPanel && (
+        <div className="absolute top-10 left-0 bg-white shadow-md rounded-lg p-3 flex gap-3">
+          <div className="flex flex-col gap-2 w-60">
+            <div className="flex items-center justify-between gap-2">
+              <label className="text-sm text-gray-600">Text size:</label>
+              <input
+                type="range"
+                min={1}
+                max={100}
+                defaultValue={textSize}
+                onChange={(e) => {
+                  setTextSize(parseInt(e.target.value));
+                  updateCanvasObject(selectedObjectId, {
+                    fontSize: parseInt(e.target.value),
+                  });
+                }}
+                className="accent-blue-500 w-43"
+              />
+            </div>
+
+            <div className="flex items-center justify-between gap-2">
+              <label className="text-sm text-gray-600">Line height:</label>
+              <input
+                type="range"
+                min={0}
+                max={5}
+                defaultValue={lineSpacing}
+                onChange={(e) => {
+                  setLineSpacing(parseInt(e.target.value));
+                  updateCanvasObject(selectedObjectId, {
+                    lineHeight: parseInt(e.target.value),
+                  });
+                }}
+                className="accent-blue-500 w-43"
+              />
+            </div>
+
+            <div className="flex justify-between items-center gap-2">
+              <label className="text-sm text-gray-600">Text color:</label>
+              <input
+                type="text"
+                value={textColor}
+                onChange={(e) => {
+                  setTextColor(e.target.value);
+                  updateCanvasObject(selectedObjectId, {
+                    fill: e.target.value,
+                  });
+                }}
+                className="border rounded px-2 py-1 text-sm w-37"
+              />
+            </div>
+
+            <div>
+              <p className="text-sm text-gray-600 pb-2">Alignment:</p>
+              <div className="flex items-center justify-between gap-2 px-10">
+                <IconAlignLeft
+                  onClick={() => {
+                    setTextAlignment("left");
+                    updateCanvasObject(selectedObjectId, { align: "left" });
+                  }}
+                />
+                <span className="h-full w-[1px]"></span>
+                <IconAlignLeft
+                  onClick={() => {
+                    setTextAlignment("center");
+                    updateCanvasObject(selectedObjectId, { align: "center" });
+                  }}
+                />
+                <span className="h-full w-[1px]"></span>
+                <IconAlignLeft
+                  onClick={() => {
+                    setTextAlignment("right");
+                    updateCanvasObject(selectedObjectId, { align: "right" });
+                  }}
+                />
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
