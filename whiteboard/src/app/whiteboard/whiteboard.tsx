@@ -8,6 +8,8 @@ import { useWhiteBoardStore } from "./_store/whiteboardStore";
 import { CanvasObjectType } from "./types";
 import InkLayer from "./inkLayer";
 import ZoomToolbar from "./zoomToolbar";
+import { useInkStore } from "./_store/inkStore";
+import { useEraserStore } from "./_store/eraserStore";
 
 // import InkLayer from "./layers/InkLayer";
 // import ShapeLayer from "./layers/ShapeLayer";
@@ -33,8 +35,11 @@ const WhiteBoard = ({
     addCanvasObject,
     updateCanvasObject,
     selectCanvasObject,
-    resetCanvas,
   } = useWhiteBoardStore();
+  const { inkColor, inkWidth, setInkColor, setInkWidth } = useInkStore(
+    (s) => s
+  );
+  const { eraserSize, setEraserSize } = useEraserStore((s) => s);
 
   const [isInProgress, setIsInProgress] = useState(false);
   /** =====================
@@ -117,9 +122,8 @@ const WhiteBoard = ({
           id: crypto.randomUUID(),
           type: selectedTool === "eraser" ? "eraserStroke" : "ink",
           points: [pos.x, pos.y],
-          // CHange this with xustand store
-          stroke: "#2986cc",
-          strokeWidth: selectedTool === "eraser" ? 5 : 5,
+          stroke: inkColor,
+          strokeWidth: selectedTool === "eraser" ? eraserSize : inkWidth,
         });
       }
     }
