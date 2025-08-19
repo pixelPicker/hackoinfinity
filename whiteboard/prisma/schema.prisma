@@ -61,3 +61,17 @@ model VerificationToken {
 
   @@unique([identifier, token])
 }
+model Drawing {
+  id        Int      @id @default(autoincrement())
+  title     String
+  description String?
+  imageUrl  String
+  views     Int      @default(0)
+  trending  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  votes     Vote[]
+  comments  Comment[]
+}
