@@ -15,6 +15,7 @@ import WhiteBoardScale from "./scale";
 import { KonvaNodeComponent, StageProps } from "react-konva";
 import { Stage } from "konva/lib/Stage";
 import Konva from "konva";
+import RoomButtons from "@/components/RoomButtons";
 
 const Whiteboard = dynamic(() => import("./whiteboard"), {
   ssr: false,
@@ -28,8 +29,13 @@ export default function App() {
 
   return (
     <main className="w-screen h-screen bg-Surface relative">
-      <Whiteboard boardRef={whiteboardRef} />
+      <div className="absolute top-[-8] right-4 z-50">
+        <RoomButtons />
+      </div>
+      <Whiteboard boardRef={whiteboardRef} />     
       <ToolBar boardRef={whiteboardRef} />
+      
+      
     </main>
   );
 }
