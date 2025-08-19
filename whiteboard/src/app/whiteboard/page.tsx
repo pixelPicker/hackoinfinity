@@ -24,9 +24,7 @@ export default function App() {
     <main className="w-screen h-screen bg-Surface relative">
       {/* <section>Chat</section>
       <section>Room details</section>
-      <section>Undo Redo</section> */}
-         
-     
+      <section>Undo Redo</section> */}    
       <Whiteboard
         scale={scale}
         handleScaleGrow={handleScaleGrow}
