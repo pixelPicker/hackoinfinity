@@ -5,7 +5,7 @@ import { Header } from "../ui/components/Header";
 import { SearchAndFilters } from "../ui/components/SearchAndFilters";
 import { PostCard } from "../ui/components/PostCard";
 import { ImageModal } from "../ui/components/ImageModal";
-import { CommentModal } from "../ui/components/CommentModal";
+
 
 import { mockPosts } from "../data/mockData";
 import { Post, Votes, SortOption, TimeFilter } from "../types";
@@ -18,7 +18,7 @@ export default function LeaderboardPage() {
   const [votes, setVotes] = useState<Votes>({});
   const [visiblePosts, setVisiblePosts] = useState<number>(6);
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [commentModal, setCommentModal] = useState<{ isOpen: boolean; postId: number; postTitle: string } | null>(null);
+
 
   const filteredAndSortedPosts = useMemo((): Post[] => {
     let filtered = mockPosts.filter((post: Post) =>
@@ -106,16 +106,7 @@ export default function LeaderboardPage() {
     });
   };
 
-  const handleComment = (postId: number): void => {
-    const post = mockPosts.find(p => p.id === postId);
-    if (post) {
-      setCommentModal({
-        isOpen: true,
-        postId,
-        postTitle: post.title
-      });
-    }
-  };
+  
 
   const handleShare = async (post: Post): Promise<void> => {
     try {
@@ -192,7 +183,7 @@ export default function LeaderboardPage() {
                index={index}
                votes={votes}
                onVote={handleVote}
-               onComment={handleComment}
+              
                onShare={handleShare}
                onImageClick={setSelectedImg}
              />
@@ -213,15 +204,7 @@ export default function LeaderboardPage() {
       {/* Image Modal */}
       <ImageModal selectedImg={selectedImg} onClose={() => setSelectedImg(null)} />
 
-      {/* Comment Modal */}
-      {commentModal && (
-        <CommentModal
-          isOpen={commentModal.isOpen}
-          onClose={() => setCommentModal(null)}
-          postId={commentModal.postId}
-          postTitle={commentModal.postTitle}
-        />
-      )}
+     
     </div>
   );
 }

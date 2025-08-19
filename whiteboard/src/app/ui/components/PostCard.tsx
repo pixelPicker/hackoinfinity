@@ -25,7 +25,7 @@ export const PostCard: React.FC<PostCardProps> = ({
   index,
   votes,
   onVote,
-  onComment,
+  // onComment,
   onShare,
   onImageClick,
 }) => {
@@ -106,7 +106,7 @@ export const PostCard: React.FC<PostCardProps> = ({
 
                 {/* Actions */}
         <div className="flex items-center justify-between pt-4 border-t border-gray-200 bg-gray-50 -mx-4 sm:-mx-6 px-4 sm:px-6 py-4">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 justify-center">
             <button
               onClick={() => onVote(post.id, 'up')}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all hover:scale-105 font-semibold cursor-pointer ${
@@ -132,17 +132,6 @@ export const PostCard: React.FC<PostCardProps> = ({
               <ArrowBigDown size={20} />
               <span className="text-sm font-bold">{post.downvotes}</span>
             </button>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button 
-              onClick={() => onComment(post.id)}
-              className="flex items-center gap-2 text-blue-700 bg-blue-100 hover:bg-blue-200 transition-all px-3 py-2 rounded-xl font-medium cursor-pointer border border-blue-300 hover:border-blue-400"
-            >
-              <MessageCircle size={18} />
-              <span className="text-sm font-semibold">{post.comments}</span>
-            </button>
-            
             <button 
               onClick={() => onShare(post)}
               className="p-2 rounded-xl text-purple-700 bg-purple-100 hover:bg-purple-200 transition-all hover:scale-110 cursor-pointer border border-purple-300 hover:border-purple-400"
@@ -150,6 +139,8 @@ export const PostCard: React.FC<PostCardProps> = ({
               <Share2 size={18} />
             </button>
           </div>
+
+          
         </div>
       </div>
     </div>
