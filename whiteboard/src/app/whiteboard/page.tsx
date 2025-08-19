@@ -1,7 +1,8 @@
 "use client";
-
-import { IconMinus, IconPlus } from "@tabler/icons-react";
+import { IconMinus, IconPlayerPlay, IconCircleDashedPlus, IconUsers, IconPlus } from "@tabler/icons-react";
+import clsx from "clsx";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import React, { useRef, useState } from "react";
 import { useWhiteBoardStore } from "./_store/whiteboardStore";
 import WhiteBoardScale from "./scale";
@@ -23,10 +24,20 @@ export default function App() {
     <main className="w-screen h-screen bg-Surface relative">
       {/* <section>Chat</section>
       <section>Room details</section>
-      */}
-      <Whiteboard boardRef={whiteboardRef} />
-      <ToolBar boardRef={whiteboardRef} />
-      {/* <WhiteBoardScale /> */}
+      <section>Undo Redo</section> */}
+         
+     
+      <Whiteboard
+        scale={scale}
+        handleScaleGrow={handleScaleGrow}
+        handleScaleShrink={handleScaleShrink}
+      />
+      <ToolBar />
+      <WhiteBoardScale
+        scale={scale}
+        handleScaleGrow={handleScaleGrow}
+        handleScaleShrink={handleScaleShrink}
+      />
     </main>
   );
 }

@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,7 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// User management for authentication
 model User {
   id            String    @id @default(cuid())
   name          String?
@@ -20,13 +16,15 @@ model User {
   image         String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
-
-  // Relations
   accounts      Account[]
   sessions      Session[]
+
+  // Back‐relation for rooms the user created
+  createdRooms      Room[]              @relation("RoomCreator")
+  // Back‐relation for rooms the user joined
+  roomParticipants  RoomParticipant[]   @relation("UserParticipants")
 }
 
-// Auth.js required models
 model Account {
   id                String  @id @default(cuid())
   userId            String
@@ -40,8 +38,7 @@ model Account {
   scope             String?
   id_token          String?
   session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
 }
@@ -61,17 +58,31 @@ model VerificationToken {
 
   @@unique([identifier, token])
 }
-model Drawing {
-  id        Int      @id @default(autoincrement())
-  title     String
-  description String?
-  imageUrl  String
-  views     Int      @default(0)
-  trending  Boolean  @default(false)
-  createdAt DateTime @default(now())
 
-  authorId  String
-  author    User     @relation(fields: [authorId], references: [id])
-  votes     Vote[]
-  comments  Comment[]
+/// Rooms table for storing unique room codes
+model Room {
+  id           String    @id @default(cuid())
+  roomCode     String    @unique
+  createdById  String
+  createdBy    User      @relation("RoomCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  createdAt    DateTime  @default(now())
+  isActive     Boolean   @default(true)
+
+  participants RoomParticipant[]
+
+  @@map("rooms")
+}
+
+/// Join table tracking which users have joined which rooms
+model RoomParticipant {
+  id        String   @id @default(cuid())
+  roomId    String
+  userId    String
+  joinedAt  DateTime @default(now())
+
+  room   Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user   User @relation("UserParticipants", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, userId])
+  @@map("room_participants")
 }
