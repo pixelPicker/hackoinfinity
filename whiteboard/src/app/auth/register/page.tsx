@@ -85,7 +85,7 @@ export default function RegisterPage() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                 />
-                <div className="absolute right-3 top-10 text-xl text-[var(--secondary-text)]">
+                <div className="absolute right-3 top-11 text-xl text-[var(--secondary-text)]">
                   <MdPerson />
                 </div>
               </div>
@@ -105,7 +105,7 @@ export default function RegisterPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
-                <div className="absolute right-3 top-10 text-xl text-[var(--secondary-text)]">
+                <div className="absolute right-3 top-11 text-xl text-[var(--secondary-text)]">
                   <MdEmail />
                 </div>
               </div>
@@ -125,7 +125,7 @@ export default function RegisterPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
-                <div className="absolute right-3 top-10 text-xl text-[var(--secondary-text)]">
+                <div className="absolute right-3 top-11 text-xl text-[var(--secondary-text)]">
                   <MdLock />
                 </div>
               </div>
