@@ -4,7 +4,16 @@ import dynamic from "next/dynamic";
 import React, { useEffect, useRef, useState } from "react";
 import Konva from "konva";
 import io, { Socket } from "socket.io-client";
-import { Room, User } from "@prisma/client";
+import { User } from "@prisma/client";
+
+type Room = {
+  id: string;
+  roomCode: string;
+  createdById: string;
+  createdAt: Date;
+  updatedAt: Date;
+  createdBy: User;
+};
 import { dmsans, spaceGrotesk } from "../ui/fonts";
 import { useSession } from "next-auth/react";
 import {
@@ -16,6 +25,11 @@ import {
   IconUser,
   IconUsers,
   IconX,
+  IconUserCircle,
+  IconDoor,
+  IconChevronDown,
+  IconLogin,
+  IconLogout,
 } from "@tabler/icons-react";
 import clsx from "clsx";
 import { useRouter } from "next/navigation";
@@ -40,6 +54,8 @@ export default function App() {
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [showRoomDropdown, setShowRoomDropdown] = useState(false);
 
   const [joinCode, setJoinCode] = useState("");
 
@@ -51,6 +67,22 @@ export default function App() {
         upgrade: true,
       });
     }
+
+    // Close dropdowns when clicking outside
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      // Check if click is outside dropdown containers
+      if (!target.closest('.dropdown-container') && !target.closest('.dropdown-menu')) {
+        setShowUserDropdown(false);
+        setShowRoomDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    
+    const cleanup = () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
     socket.on("connect_error", (err) => {
       console.log(err.message);
     });
@@ -114,6 +146,7 @@ export default function App() {
       socket?.off("redo");
       setRoom(null);
       setRoomActive(false);
+      cleanup();
     };
   }, []);
 
@@ -121,6 +154,8 @@ export default function App() {
     setShowCreateModal(false);
     setShowJoinModal(false);
     setJoinCode("");
+    setShowUserDropdown(false);
+    setShowRoomDropdown(false);
   };
 
   const handleCreateRoom = () => {
@@ -133,7 +168,7 @@ export default function App() {
     const code = Math.random().toString(36).substring(2, 8).toUpperCase();
     console.log("Room creation request");
     setRoomCode(code);
-    socket?.emit("create-room", { roomCode: code, userId: session.user.id });
+    socket?.emit("create-room", { roomCode: code, userId: session.user?.email });
   };
 
   const handleJoinRoomClick = () => {
@@ -146,7 +181,7 @@ export default function App() {
     if (!session || !session.user || !session.user.email) return;
     e.preventDefault();
     if (joinCode.length !== 6) return;
-    socket?.emit("join-room", { roomCode: joinCode, userId: session.user.id });
+    socket?.emit("join-room", { roomCode: joinCode, userId: session.user?.email });
   };
 
   const handleLeaveRoom = () => {
@@ -185,9 +220,15 @@ export default function App() {
       {!roomActive && (
         <div className="absolute top-4 right-4 z-50">
           <div className={dmsans.className}>
-            <RoomButtons
+            <HeaderButtons
+              session={session}
+              showUserDropdown={showUserDropdown}
+              setShowUserDropdown={setShowUserDropdown}
+              showRoomDropdown={showRoomDropdown}
+              setShowRoomDropdown={setShowRoomDropdown}
               handleCreateRoom={handleCreateRoom}
               handleJoinRoomClick={handleJoinRoomClick}
+              router={router}
             />
 
             {showCreateModal && (
@@ -216,34 +257,128 @@ export default function App() {
   );
 }
 
-function RoomButtons({
+function HeaderButtons({
+  session,
+  showUserDropdown,
+  setShowUserDropdown,
+  showRoomDropdown,
+  setShowRoomDropdown,
   handleCreateRoom,
   handleJoinRoomClick,
+  router,
 }: {
+  session: any;
+  showUserDropdown: boolean;
+  setShowUserDropdown: (show: boolean) => void;
+  showRoomDropdown: boolean;
+  setShowRoomDropdown: (show: boolean) => void;
   handleCreateRoom: () => void;
   handleJoinRoomClick: () => void;
+  router: any;
 }) {
+  const handleLogout = async () => {
+    const { signOut } = await import("next-auth/react");
+    await signOut();
+    setShowUserDropdown(false);
+  };
+
+  const handleLogin = () => {
+    router.push("/auth/login");
+    setShowUserDropdown(false);
+  };
+
   return (
     <div className="fixed top-[20px] right-[10px] flex gap-4">
-      <button
-        onClick={handleCreateRoom}
-        className={clsx(
-          "flex items-center gap-2 select-none cursor-pointer transition-transform duration-200 bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white p-3 shadow-lg rounded-lg",
-          "disabled:opacity-50 disabled:cursor-not-allowed"
-        )}
-      >
-        Create a room <IconCircleDashedPlus />
-      </button>
+      {/* Room Button - Now on the left */}
+      <div className="relative dropdown-container">
+        <button
+          onClick={() => {
+            setShowRoomDropdown(!showRoomDropdown);
+            setShowUserDropdown(false);
+          }}
+          className={clsx(
+            "flex items-center gap-2 select-none cursor-pointer transition-all duration-200 bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white p-3 shadow-lg rounded-lg font-medium"
+          )}
+        >
+          <IconDoor size={20} />
+          <span className="text-sm font-medium">Room</span>
+          <IconChevronDown size={16} className={clsx("transition-transform duration-200", showRoomDropdown && "rotate-180")} />
+        </button>
 
-      <button
-        onClick={handleJoinRoomClick}
-        className={clsx(
-          "cursor-pointer transition-transform duration-200 bg-gray-600 text-white p-3 rounded-lg shadow-lg",
-          "flex items-center gap-2 select-none"
+        {/* Room Dropdown */}
+        {showRoomDropdown && (
+          <div className="dropdown-menu absolute top-full left-0 mt-2 w-48 bg-white rounded-xl shadow-xl border-2 border-orange-200 py-2 z-50 animate-in slide-in-from-top-2 duration-200">
+            <button
+              onClick={() => {
+                handleCreateRoom();
+                setShowRoomDropdown(false);
+              }}
+              className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-700 flex items-center gap-3 cursor-pointer transition-colors duration-150 font-medium"
+            >
+              <IconCircleDashedPlus size={18} className="text-orange-500" />
+              Create Room
+            </button>
+            <button
+              onClick={() => {
+                handleJoinRoomClick();
+                setShowRoomDropdown(false);
+              }}
+              className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-700 flex items-center gap-3 cursor-pointer transition-colors duration-150 font-medium"
+            >
+              <IconUser size={18} className="text-orange-500" />
+              Join Room
+            </button>
+          </div>
         )}
-      >
-        Join a room <IconUser />
-      </button>
+      </div>
+
+      {/* User Profile Button - Now on the right */}
+      <div className="relative dropdown-container">
+        <button
+          onClick={() => {
+            setShowUserDropdown(!showUserDropdown);
+            setShowRoomDropdown(false);
+          }}
+          className={clsx(
+            "flex items-center gap-2 select-none cursor-pointer transition-all duration-200 bg-gray-700 hover:bg-gray-800 active:bg-gray-900 text-white p-3 shadow-lg rounded-lg font-medium"
+          )}
+        >
+          <IconUserCircle size={20} />
+          <span className="text-sm font-medium">
+            {session?.user?.name || "Guest"}
+          </span>
+          <IconChevronDown size={16} className={clsx("transition-transform duration-200", showUserDropdown && "rotate-180")} />
+        </button>
+
+        {/* User Dropdown */}
+        {showUserDropdown && (
+          <div className="dropdown-menu absolute top-full right-0 mt-2 w-52 bg-white rounded-xl shadow-xl border-2 border-gray-200 py-2 z-50 animate-in slide-in-from-top-2 duration-200">
+            {session ? (
+              <>
+                <div className="px-4 py-3 text-sm text-gray-700 border-b border-gray-100">
+                  <div className="font-semibold text-gray-900">{session.user?.name}</div>
+                  <div className="text-gray-500 text-xs mt-1">{session.user?.email}</div>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50 hover:text-red-700 flex items-center gap-3 cursor-pointer transition-colors duration-150 font-medium"
+                >
+                  <IconLogout size={18} />
+                  Logout
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={handleLogin}
+                className="w-full text-left px-4 py-3 text-sm text-orange-600 hover:bg-orange-50 hover:text-orange-700 flex items-center gap-3 cursor-pointer transition-colors duration-150 font-medium"
+              >
+                <IconLogin size={18} />
+                Login
+              </button>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
