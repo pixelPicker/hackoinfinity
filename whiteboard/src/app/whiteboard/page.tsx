@@ -19,6 +19,8 @@ import {
 } from "@tabler/icons-react";
 import clsx from "clsx";
 import { useRouter } from "next/navigation";
+import { useWhiteBoardStore } from "./_store/whiteboardStore";
+import { useRoomStore } from "./_store/roomStore";
 
 const Whiteboard = dynamic(() => import("./whiteboard"), { ssr: false });
 const ToolBar = dynamic(() => import("./toolbar"), { ssr: false });
@@ -30,7 +32,7 @@ export default function App() {
   const { data: session } = useSession();
   const router = useRouter();
 
-  const [roomCode, setRoomCode] = useState("");
+  const { roomCode, setRoomCode, clearRoomCode } = useRoomStore((s) => s);
   const [room, setRoom] = useState(null);
 
   const [users, setUsers] = useState<User[]>([]);
@@ -56,8 +58,9 @@ export default function App() {
     socket.on("created-room", (room) => {
       console.log("Room created:", room);
       setRoom(room);
+      setRoomCode(room.roomCode);
       setRoomActive(true);
-      // setUsers(room.participants.map((p: { user: User }) => p.user));
+      setUsers(room.participants.map((p: { user: User }) => p.user));
     });
 
     socket.on("room-users", (userList: User[]) => {
@@ -68,23 +71,51 @@ export default function App() {
       console.log("Room joined", room);
       setRoom(room);
       setRoomActive(true);
+      setRoomCode(room.roomCode);
       setShowCreateModal(false);
       setShowJoinModal(false);
     });
 
     socket.on("room:error", (msg: string) => {});
 
+    socket.on("add-canvas-object", ({ object }) => {
+      useWhiteBoardStore.getState().addCanvasObject(object);
+    });
+
+    socket.on("update-canvas-object", ({ object }) => {
+      useWhiteBoardStore.getState().updateCanvasObject(object.id, object);
+    });
+
+    socket.on("delete-canvas-object", ({ id }) => {
+      useWhiteBoardStore.getState().deleteCanvasObject(id);
+    });
+
+    socket.on("reset-canvas", () => {
+      useWhiteBoardStore.getState().resetCanvas();
+    });
+
+    socket.on("undo", () => {
+      useWhiteBoardStore.getState().undo();
+    });
+
+    socket.on("redo", () => {
+      useWhiteBoardStore.getState().redo();
+    });
+
     return () => {
-      if (socket) socket.disconnect();
+      socket?.disconnect();
       socket?.off("room:users");
       socket?.off("joined-room");
+      socket?.off("add-canvas-object");
+      socket?.off("update-canvas-object");
+      socket?.off("delete-canvas-object");
+      socket?.off("reset-canvas");
+      socket?.off("undo");
+      socket?.off("redo");
       setRoom(null);
       setRoomActive(false);
-      // socket?.off("room:error");
     };
   }, []);
-
-  
 
   const resetState = () => {
     setShowCreateModal(false);
@@ -101,7 +132,7 @@ export default function App() {
     }
     const code = Math.random().toString(36).substring(2, 8).toUpperCase();
     console.log("Room creation request");
-
+    setRoomCode(code);
     socket?.emit("create-room", { roomCode: code, userId: session.user.id });
   };
 
@@ -129,7 +160,7 @@ export default function App() {
 
   const copyToClipboard = async () => {
     try {
-      await navigator.clipboard.writeText(roomCode);
+      if (roomCode) await navigator.clipboard.writeText(roomCode);
     } catch {}
   };
 
@@ -140,8 +171,8 @@ export default function App() {
   return (
     <main className="w-screen h-screen bg-Surface relative">
       {/* Whiteboard + Toolbar */}
-      <Whiteboard boardRef={whiteboardRef} />
-      <ToolBar boardRef={whiteboardRef} />
+      <Whiteboard boardRef={whiteboardRef} socket={socket} />
+      <ToolBar boardRef={whiteboardRef} socket={socket} />
 
       {/* Sidebar (only when inside a room) */}
       {roomActive && (
@@ -226,7 +257,7 @@ function CreateRoomModal({
   resetState: () => void;
   handleStartRoom: () => void;
   copyToClipBoard: () => void;
-  roomCode: string;
+  roomCode: string | null;
 }) {
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -381,7 +412,7 @@ function RoomInfoDump({
         <ul className={clsx(!isOpen && "hidden", "text-gray-700 m-2")}>
           {users.map((u, i) => (
             <li key={u.id} className="mb-1 flex gap-2">
-              <span className={spaceGrotesk.className }>{i}.</span>
+              <span className={spaceGrotesk.className}>{i}.</span>
               <span>{u.name ?? "Anonymous"}</span>
             </li>
           ))}

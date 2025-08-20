@@ -226,15 +226,33 @@ io.on("connection", (socket) => {
 
   // Whiteboard events
   socket.on("add-canvas-object", ({ room, object }) => {
+    console.log({ room, object, event: "add" });
     socket.to(room).emit("add-canvas-object", { object });
   });
-
+  
   socket.on("update-canvas-object", ({ room, object }) => {
+    console.log({ room, object, event: "update" });
     socket.to(room).emit("update-canvas-object", { object });
   });
-
+  
   socket.on("delete-canvas-object", ({ room, id }) => {
+    console.log({ room, id, event: "delete" });
     socket.to(room).emit("delete-canvas-object", { id });
+  });
+
+  socket.on("reset-canvas", ({ roomCode }) => {
+    console.log("resetting canvas");
+    socket.to(roomCode).emit("reset-canvas");
+  });
+
+  socket.on("undo", ({ roomCode }) => {
+    console.log("undo canvas");
+    socket.to(roomCode).emit("undo");
+  });
+
+  socket.on("redo", ({ roomCode }) => {
+    console.log("redo canvas");
+    socket.to(roomCode).emit("redo");
   });
 });
 

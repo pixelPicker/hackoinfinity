@@ -13,7 +13,10 @@ interface WhiteboardState {
   canvasObjects: CanvasObjectType[];
   setCanvasObjects: (objects: CanvasObjectType[]) => void;
   addCanvasObject: (object: CanvasObjectType) => void;
-  updateCanvasObject: (id: string | null, updates: Partial<CanvasObjectType>) => void;
+  updateCanvasObject: (
+    id: string | null,
+    updates: Partial<CanvasObjectType>
+  ) => void;
   deleteCanvasObject: (id: string) => void;
   selectCanvasObject: (id: string) => void;
   resetCanvas: () => void;
@@ -86,6 +89,7 @@ export const useWhiteBoardStore = create<WhiteboardState>((set, get) => ({
   redoStack: [],
   undo: () => {
     const { undoStack, redoStack, canvasObjects } = get();
+    console.log({ undoStack, redoStack, canvasObjects });
     if (undoStack.length === 0) return;
 
     const prev = undoStack[undoStack.length - 1];
@@ -97,6 +101,7 @@ export const useWhiteBoardStore = create<WhiteboardState>((set, get) => ({
   },
   redo: () => {
     const { undoStack, redoStack, canvasObjects } = get();
+    console.log({ undoStack, redoStack, canvasObjects });
     if (redoStack.length === 0) return;
 
     const next = redoStack[redoStack.length - 1];

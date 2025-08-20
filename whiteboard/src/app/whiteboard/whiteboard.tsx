@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  SetStateAction,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { Stage } from "react-konva";
 import Konva from "konva";
 import { KonvaEventObject } from "konva/lib/Node";
@@ -29,21 +35,30 @@ import {
 } from "@tabler/icons-react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import socket from "../api/socket";
+import { Socket } from "socket.io-client";
+import { DefaultEventsMap } from "socket.io";
+import { useRoomStore } from "./_store/roomStore";
 
 const WhiteBoard = ({
   boardRef,
+  socket,
 }: {
   boardRef: React.RefObject<Konva.Stage | null>;
+  socket: Socket<DefaultEventsMap, DefaultEventsMap> | null;
 }) => {
   const stageRef = useRef<Konva.Stage | null>(null);
   const [newObject, setNewObject] = useState<CanvasObjectType | null>(null);
   const [zoomLevel, setZoomLevel] = useState(1);
   const { data: session } = useSession();
   const router = useRouter();
+
+  const { clearRoomCode, roomCode, setRoomCode } = useRoomStore();
+
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [roomCode, setRoomCode] = useState("");
+  // const [roomCode, setRoomCode] = useState("");
   const [joinCode, setJoinCode] = useState("");
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -54,107 +69,10 @@ const WhiteBoard = ({
     setShowCreateModal(false);
     setShowJoinModal(false);
     setShowAuthModal(false);
-    setRoomCode("");
     setJoinCode("");
     setCopied(false);
     setError("");
     setLoading(false);
-  };
-
-  // Check authentication before showing modals
-  const handleCreateRoom = async () => {
-    // Reset state first
-    resetState();
-
-    if (!session) {
-      setShowAuthModal(true);
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const code = Math.random().toString(36).substr(2, 6).toUpperCase();
-
-      // Create room in database
-      const response = await fetch("/api/rooms/create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          roomCode: code,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setRoomCode(code);
-        setShowCreateModal(true);
-      } else {
-        setError(data.error || "Failed to create room");
-      }
-    } catch (error) {
-      setError("Failed to create room");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleJoinRoomClick = () => {
-    // Reset state first
-    resetState();
-
-    if (!session) {
-      setShowAuthModal(true);
-      return;
-    }
-    setShowJoinModal(true);
-  };
-
-  // Copy code to clipboard
-  const copyToClipboard = async () => {
-    try {
-      await navigator.clipboard.writeText(roomCode);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error("Failed to copy:", err);
-    }
-  };
-
-  // Handle join room with database validation
-  const handleJoinRoom = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (joinCode.length !== 6) return;
-
-    setLoading(true);
-    setError("");
-
-    try {
-      const response = await fetch("/api/rooms/join", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          roomCode: joinCode,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        // Navigate to whiteboard with room code
-        router.push(`/whiteboard?room=${joinCode}`);
-      } else {
-        setError(data.error || "Room not found");
-      }
-    } catch (error) {
-      setError("Failed to join room");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleStartRoom = () => {
-    router.push(`/whiteboard?room=${roomCode}`);
   };
 
   const {
@@ -167,40 +85,26 @@ const WhiteBoard = ({
     updateCanvasObject,
     selectCanvasObject,
     deleteCanvasObject,
-    resetCanvas,
   } = useWhiteBoardStore();
+
   const { inkColor, inkWidth } = useInkStore((s) => s);
   const { eraserSize } = useEraserStore((s) => s);
-  const {
-    textColor,
-    textSize,
-    lineSpacing,
-    setLineSpacing,
-    setTextAlignment,
-    setTextColor,
-    setTextSize,
-    setTextStyle,
-    textAlignment,
-    textStyle,
-  } = useTextStore((s) => s);
-  const {
-    borderColor,
-    borderWidth,
-    fillColor,
-    setBorderColor,
-    setBorderWidth,
-    setFillColor,
-  } = useShapeStore((s) => s);
+  const { textColor, textSize, lineSpacing, textAlignment, textStyle } =
+    useTextStore((s) => s);
+  const { borderColor, borderWidth, fillColor } = useShapeStore((s) => s);
+  const [isInProgress, setIsInProgress] = useState(false);
 
   const handleDelete = useCallback(() => {
     if (selectedObjectId) {
       deleteCanvasObject(selectedObjectId);
+      if (roomCode && socket) {
+        socket.emit("delete-canvas-object", {
+          room: roomCode,
+          id: selectedObjectId,
+        });
+      }
     }
   }, [selectedObjectId, canvasObjects]);
-
-  const resetCanvasState = useCallback(() => {
-    resetCanvas();
-  }, []);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -214,11 +118,17 @@ const WhiteBoard = ({
         (event.metaKey && event.key === "z" && !event.shiftKey) // Cmd+Z for macOS
       ) {
         undo();
+        if (socket && roomCode) {
+          socket.emit("undo", { roomCode });
+        }
       } else if (
         (event.ctrlKey && event.key === "y") || // Ctrl+Y for Windows/Linux
         (event.metaKey && event.shiftKey && event.key === "z") // Cmd+Shift+Z for macOS
       ) {
         redo();
+        if (socket && roomCode) {
+          socket.emit("redo", { roomCode });
+        }
       }
     };
 
@@ -301,8 +211,6 @@ const WhiteBoard = ({
     selectCanvasObject(newShapeId);
   };
 
-  const [isInProgress, setIsInProgress] = useState(false);
-
   const handleMouseDown = (e: any) => {
     if (!selectedObjectId) {
       setIsInProgress(true);
@@ -367,17 +275,21 @@ const WhiteBoard = ({
       const width = Math.max(Math.abs(point.x - newObject.x!) || 5);
       const height = Math.max(Math.abs(point.y - newObject.y!) || 5);
 
-      setNewObject({
+      const updatedObject = {
         ...newObject,
         width: newObject.shapeName === "star" ? Math.min(width, height) : width,
         height:
           newObject.shapeName === "star" ? Math.min(width, height) : height,
-      });
+      };
+
+      setNewObject(updatedObject);
     } else {
-      setNewObject({
+      const updatedObject = {
         ...newObject,
         points: newObject.points!.concat([point.x, point.y]),
-      });
+      };
+
+      setNewObject(updatedObject);
     }
   };
 
@@ -385,6 +297,11 @@ const WhiteBoard = ({
     if (isInProgress && newObject) {
       addCanvasObject(newObject);
 
+      console.log({ socket, roomCode });
+
+      if (socket && roomCode) {
+        socket.emit("add-canvas-object", { room: roomCode, object: newObject });
+      }
       if (selectedTool !== "pen" && selectedTool !== "eraser") {
         // switch back to select mode
         useWhiteBoardStore.setState({ selectedTool: "select" });
@@ -394,9 +311,6 @@ const WhiteBoard = ({
     setIsInProgress(false);
   };
 
-  /** =====================
-   * Zoom Handler
-   * ===================== */
   function handleWheelZoom(e: KonvaEventObject<WheelEvent>): void {
     e.evt.preventDefault();
     const stage = stageRef.current;
@@ -446,6 +360,7 @@ const WhiteBoard = ({
           selectedObjectId={selectedObjectId}
           setSelectedObjectId={selectCanvasObject}
           onChange={updateCanvasObject}
+          socket={socket}
         />
         <TextLayer
           objects={canvasObjects}
@@ -454,6 +369,7 @@ const WhiteBoard = ({
           setSelectedObjectId={selectCanvasObject}
           onChange={updateCanvasObject}
           zoomLevel={zoomLevel}
+          socket={socket}
         />
       </Stage>
 
@@ -525,26 +441,6 @@ const WhiteBoard = ({
                   Share this code with others to join your room
                 </p>
               </div>
-
-              <div className="bg-[var(--surface)] rounded-2xl p-6 mb-6 border-2 border-[var(--accent)]">
-                <div className="text-3xl font-mono font-bold text-[var(--primary-text)] mb-3 tracking-wider">
-                  {roomCode}
-                </div>
-                <button
-                  onClick={copyToClipboard}
-                  className="flex items-center gap-2 mx-auto px-4 py-2 bg-[var(--accent)] text-[var(--primary-text)] rounded-2xl hover:bg-[var(--accent-dark)] transition-colors font-medium"
-                >
-                  <IconCopy size={16} />
-                  {copied ? "Copied!" : "Copy Code"}
-                </button>
-              </div>
-
-              <button
-                onClick={handleStartRoom}
-                className="w-full px-6 py-3 bg-[var(--accent)] text-[var(--primary-text)] rounded-2xl hover:bg-[var(--accent-dark)] transition-colors font-medium border-3 border-[var(--accent)]"
-              >
-                Enter Room
-              </button>
             </div>
           </div>
         </div>

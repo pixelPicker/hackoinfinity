@@ -4,6 +4,9 @@ import { useTextStore } from "./_store/textStore";
 import { useWhiteBoardStore } from "./_store/whiteboardStore";
 import { CanvasObjectType } from "./types";
 import TextField from "./_text/textField";
+import { Socket } from "socket.io-client";
+import { DefaultEventsMap } from "socket.io";
+import { useRoomStore } from "./_store/roomStore";
 
 type Props = {
   objects: CanvasObjectType[];
@@ -15,6 +18,7 @@ type Props = {
     newAttrs: Partial<CanvasObjectType>
   ) => void;
   zoomLevel: number;
+  socket: Socket<DefaultEventsMap, DefaultEventsMap> | null;
 };
 
 export default function TextLayer({
@@ -24,6 +28,7 @@ export default function TextLayer({
   setSelectedObjectId,
   onChange,
   zoomLevel,
+  socket,
 }: Props) {
   const {
     textSize,
@@ -37,7 +42,7 @@ export default function TextLayer({
     setTextAlignment,
     setLineSpacing,
   } = useTextStore((s) => s);
-
+  const { roomCode } = useRoomStore((s) => s);
   const { selectedTool } = useWhiteBoardStore((s) => s);
 
   const texts = [
@@ -84,9 +89,12 @@ export default function TextLayer({
             // e.target.moveToTop(); // Upon select, move the object to top of canvas
             // e.target.getLayer().batchDraw(); // Redraw
           }}
-          onChange={(newAttrs: Partial<CanvasObjectType>) =>
-            onChange(text.id, newAttrs)
-          }
+          onChange={(newAttrs: Partial<CanvasObjectType>) => {
+            onChange(text.id, newAttrs);
+            if (socket && roomCode) {
+              socket.emit("update-canvas-object", { roomCode, newAttrs });
+            }
+          }}
           zoomLevel={zoomLevel}
         />
       ))}

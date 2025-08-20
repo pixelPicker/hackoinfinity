@@ -33,11 +33,17 @@ import MyColorPicker from "./colorPicker";
 import { useShapeStore } from "./_store/shapeStore";
 import { presetColors } from "./_shapes/utils";
 import { useTextStore } from "./_store/textStore";
+import { Socket } from "socket.io-client";
+import { DefaultEventsMap } from "socket.io";
+import { useRoomStore } from "./_store/roomStore";
+import { useSession } from "next-auth/react";
 
 export default function ToolBar({
   boardRef,
+  socket,
 }: {
   boardRef: React.RefObject<Konva.Stage | null>;
+  socket: Socket<DefaultEventsMap, DefaultEventsMap> | null;
 }) {
   const {
     undo,
@@ -49,45 +55,89 @@ export default function ToolBar({
     resetCanvas,
     canvasObjects,
   } = useWhiteBoardStore((s) => s);
-
+  const [toggleClearAllModal, setToggleClearAllModal] = useState(false);
+  const { roomCode } = useRoomStore((s) => s);
+  const { data } = useSession();
   return (
-    <section className="fixed top-[20px] left-1/2 -translate-x-1/2 flex items-center gap-4 bg-white shadow-lg rounded-xl p-3 border border-gray-200">
-      <IconArrowsMove
-        className={clsx(
-          "cursor-pointer hover:text-blue-500",
-          selectedTool === "select" && "text-blue-500"
-        )}
-        onClick={() => setSelectedTool("select")}
-      />
+    <>
+      <section className="fixed top-[20px] left-1/2 -translate-x-1/2 flex items-center gap-4 bg-white shadow-lg rounded-xl p-3 border border-gray-200">
+        <IconArrowsMove
+          className={clsx(
+            "cursor-pointer hover:text-blue-500",
+            selectedTool === "select" && "text-blue-500"
+          )}
+          onClick={() => setSelectedTool("select")}
+        />
 
-      <PenSelector />
+        <PenSelector />
 
-      <TextSelector />
+        <TextSelector socket={socket} />
 
-      <ShapeSelector />
+        <ShapeSelector />
 
-      <EraserSelector />
+        <EraserSelector />
 
-      <IconArrowBackUp
-        className={`cursor-pointer ${
-          undoStack.length === 0 ? "opacity-30" : "hover:text-blue-500"
-        }`}
-        onClick={undo}
-      />
-      <IconArrowForwardUp
-        className={`cursor-pointer ${
-          redoStack.length === 0 ? "opacity-30" : "hover:text-blue-500"
-        }`}
-        onClick={redo}
-      />
+        <IconArrowBackUp
+          className={`cursor-pointer ${
+            undoStack.length === 0 ? "opacity-30" : "hover:text-blue-500"
+          }`}
+          onClick={() => {
+            undo();
+            if (socket && roomCode) {
+              socket.emit("undo", { roomCode });
+            }
+          }}
+        />
+        <IconArrowForwardUp
+          className={`cursor-pointer ${
+            redoStack.length === 0 ? "opacity-30" : "hover:text-blue-500"
+          }`}
+          onClick={() => {
+            redo();
+            if (socket && roomCode) {
+              socket.emit("redo", { roomCode });
+            }
+          }}
+        />
 
-      <IconTrash
-        className={`cursor-pointer ${
-          canvasObjects.length === 0 ? "opacity-30" : "hover:text-red-500"
-        }`}
-        onClick={resetCanvas}
-      />
-    </section>
+        <IconTrash
+          className={`cursor-pointer ${
+            canvasObjects.length === 0 ? "opacity-30" : "hover:text-red-500"
+          }`}
+          onClick={() => setToggleClearAllModal(true)}
+        />
+      </section>
+      {toggleClearAllModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-3xl p-8 max-w-md w-full mx-4 relative border-4 border-Accent">
+            <h2 className="text-xl pb-6">
+              Are you sure you want to clear the canvas
+            </h2>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setToggleClearAllModal(false)}
+                className="flex-1 cursor-pointer px-6 py-3 border-3 border-Accent text-Primary-Text rounded-2xl hover:bg-Surface transition-colors font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  resetCanvas();
+                  if (socket && roomCode) {
+                    socket.emit("reset-canvas", { roomCode });
+                  }
+                  setToggleClearAllModal(false);
+                }}
+                className="flex-1 cursor-pointer px-6 py-3 bg-Acborder-Accent text-Primary-Text rounded-2xl hover:bg-red-500 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -288,13 +338,20 @@ function PenSelector() {
   );
 }
 
-function TextSelector() {
+function TextSelector({
+  socket,
+}: {
+  socket: Socket<DefaultEventsMap, DefaultEventsMap> | null;
+}) {
   const [showTextPanel, setShowTextPanel] = useState(false);
+  const { roomCode } = useRoomStore((s) => s);
+
   const {
     selectedTool,
     setSelectedTool,
     selectedObjectId,
     updateCanvasObject,
+    canvasObjects,
   } = useWhiteBoardStore((s) => s);
   const {
     lineSpacing,
@@ -336,6 +393,14 @@ function TextSelector() {
                   updateCanvasObject(selectedObjectId, {
                     fontSize: parseInt(e.target.value),
                   });
+                  if (socket && roomCode && selectedObjectId) {
+                    socket.emit("update-canvas-object", {
+                      roomCode,
+                      object: canvasObjects.find(
+                        (obj) => obj.id === selectedObjectId
+                      ),
+                    });
+                  }
                 }}
                 className="accent-blue-500 w-43"
               />
@@ -353,6 +418,14 @@ function TextSelector() {
                   updateCanvasObject(selectedObjectId, {
                     lineHeight: parseInt(e.target.value),
                   });
+                  if (socket && roomCode && selectedObjectId) {
+                    socket.emit("update-canvas-object", {
+                      roomCode,
+                      object: canvasObjects.find(
+                        (obj) => obj.id === selectedObjectId
+                      ),
+                    });
+                  }
                 }}
                 className="accent-blue-500 w-43"
               />
@@ -368,6 +441,14 @@ function TextSelector() {
                   updateCanvasObject(selectedObjectId, {
                     fill: e.target.value,
                   });
+                  if (socket && roomCode && selectedObjectId) {
+                    socket.emit("update-canvas-object", {
+                      roomCode,
+                      object: canvasObjects.find(
+                        (obj) => obj.id === selectedObjectId
+                      ),
+                    });
+                  }
                 }}
                 className="border rounded px-2 py-1 text-sm w-37"
               />
@@ -380,6 +461,14 @@ function TextSelector() {
                   onClick={() => {
                     setTextAlignment("left");
                     updateCanvasObject(selectedObjectId, { align: "left" });
+                    if (socket && roomCode && selectedObjectId) {
+                      socket.emit("update-canvas-object", {
+                        roomCode,
+                        object: canvasObjects.find(
+                          (obj) => obj.id === selectedObjectId
+                        ),
+                      });
+                    }
                   }}
                 />
                 <span className="h-full w-[1px]"></span>
@@ -387,6 +476,14 @@ function TextSelector() {
                   onClick={() => {
                     setTextAlignment("center");
                     updateCanvasObject(selectedObjectId, { align: "center" });
+                    if (socket && roomCode && selectedObjectId) {
+                      socket.emit("update-canvas-object", {
+                        roomCode,
+                        object: canvasObjects.find(
+                          (obj) => obj.id === selectedObjectId
+                        ),
+                      });
+                    }
                   }}
                 />
                 <span className="h-full w-[1px]"></span>
@@ -394,6 +491,14 @@ function TextSelector() {
                   onClick={() => {
                     setTextAlignment("right");
                     updateCanvasObject(selectedObjectId, { align: "right" });
+                    if (socket && roomCode && selectedObjectId) {
+                      socket.emit("update-canvas-object", {
+                        roomCode,
+                        object: canvasObjects.find(
+                          (obj) => obj.id === selectedObjectId
+                        ),
+                      });
+                    }
                   }}
                 />
               </div>
