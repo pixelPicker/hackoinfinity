@@ -12,7 +12,7 @@ function MyColorPicker({ isOpen, toggleOpen }: colorPickerProps) {
     (s) => s
   );
   return (
-    <div className="absolute top-10 left-0 bg-white shadow-md rounded-lg p-3 flex flex-col gap-3 w-60">
+    <div className="toolbar-dropdown absolute top-10 left-0 bg-white shadow-xl rounded-xl border-2 border-orange-200 p-4 flex flex-col gap-3 w-60 z-50">
       <div className="flex flex-wrap gap-2 justify-between items-center">
         {presetColors.map((preset) => (
           <button
