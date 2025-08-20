@@ -3,26 +3,28 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
+  url      = "file:./dev.db"
 }
 
 model User {
-  id               String            @id @default(cuid())
-  name             String?
-  email            String            @unique
-  emailVerified    DateTime?
-  password         String?
-  image            String?
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
-  accounts         Account[]
-  Message          Message[]
-  sessions         Session[]
-  roomParticipants RoomParticipant[] @relation("UserParticipants")
-  createdRooms     Room[]            @relation("RoomCreator")
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  password      String?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  accounts      Account[]
+  sessions      Session[]
+  posts         Post[]
+  votes         Vote[]
 }
 
+// Auth.js required models
 model Account {
   id                String  @id @default(cuid())
   userId            String
@@ -56,40 +58,33 @@ model VerificationToken {
 
   @@unique([identifier, token])
 }
+model Post {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?
+  img         String
+  views       Int      @default(0)
+  upvotes     Int      @default(0)
+  downvotes   Int      @default(0)
+  comments    Int      @default(0)
+  shares      Int      @default(0)
+  trending    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-/// Rooms table for storing unique room codes
-model Room {
-  id           String            @id @default(cuid())
-  roomCode     String            @unique
-  createdById  String
-  createdAt    DateTime          @default(now())
-  isActive     Boolean           @default(true)
-  Message      Message[]
-  participants RoomParticipant[]
-  createdBy    User              @relation("RoomCreator", fields: [createdById], references: [id], onDelete: Cascade)
-
-  @@map("rooms")
+  authorId    String
+  author      User     @relation(fields: [authorId], references: [id])
+  votes       Vote[]
 }
 
-/// Join table tracking which users have joined which rooms
-model RoomParticipant {
-  id       String   @id @default(cuid())
-  roomId   String
-  userId   String
-  joinedAt DateTime @default(now())
-  room     Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  user     User     @relation("UserParticipants", fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([roomId, userId])
-  @@map("room_participants")
-}
-
-model Message {
-  id        String   @id @default(uuid())
-  roomId    String
-  userId    String
-  content   String
-  createdAt DateTime @default(now())
-  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  sender    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+model Vote {
+  id     Int     @id @default(autoincrement())
+  type   String  // "up" or "down"
+  userId String
+  postId Int
+  
+  user   User    @relation(fields: [userId], references: [id])
+  post   Post    @relation(fields: [postId], references: [id])
+  
+  @@unique([userId, postId])
 }
