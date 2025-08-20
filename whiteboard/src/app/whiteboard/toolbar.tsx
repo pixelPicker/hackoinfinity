@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   IconArrowsMove,
   IconPencil,
@@ -30,6 +30,7 @@ import { useInkStore } from "./_store/inkStore";
 import { useEraserStore } from "./_store/eraserStore";
 import clsx from "clsx";
 import MyColorPicker from "./colorPicker";
+import MiniColorPicker from "./miniColorPicker";
 import { useShapeStore } from "./_store/shapeStore";
 import { presetColors } from "./_shapes/utils";
 import { useTextStore } from "./_store/textStore";
@@ -57,25 +58,72 @@ export default function ToolBar({
   const [toggleClearAllModal, setToggleClearAllModal] = useState(false);
   const { roomCode } = useRoomStore((s) => s);
   const { data } = useSession();
+  // Global state for all toolbar dropdowns
+  const [showPenProperties, setShowPenProperties] = useState(false);
+  const [showShapeProperties, setShowShapeProperties] = useState(false);
+  const [showEraserProperties, setShowEraserProperties] = useState(false);
+  const [showTextProperties, setShowTextProperties] = useState(false);
+
+  // Close all dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.toolbar-dropdown') && !target.closest('.toolbar-button')) {
+        setShowPenProperties(false);
+        setShowShapeProperties(false);
+        setShowEraserProperties(false);
+        setShowTextProperties(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const closeAllDropdowns = () => {
+    setShowPenProperties(false);
+    setShowShapeProperties(false);
+    setShowEraserProperties(false);
+    setShowTextProperties(false);
+  };
   const { socket, connect } = useSocketStore();
   return (
     <>
       <section className="fixed top-[20px] left-1/2 -translate-x-1/2 flex items-center gap-4 bg-white shadow-lg rounded-xl p-3 border border-gray-200">
         <IconArrowsMove
           className={clsx(
-            "cursor-pointer hover:text-blue-500",
+            "cursor-pointer hover:text-blue-500 toolbar-button",
             selectedTool === "select" && "text-blue-500"
           )}
-          onClick={() => setSelectedTool("select")}
+          onClick={() => {
+            closeAllDropdowns();
+            setSelectedTool("select");
+          }}
         />
 
-        <PenSelector />
+        <PenSelector 
+          showColorPicker={showPenProperties}
+          setShowColorPicker={setShowPenProperties}
+          closeAllDropdowns={closeAllDropdowns}
+        />
 
-        <TextSelector />
+        <TextSelector 
+          showTextPanel={showTextProperties}
+          setShowTextPanel={setShowTextProperties}
+          closeAllDropdowns={closeAllDropdowns}
+        />
 
-        <ShapeSelector />
+        <ShapeSelector 
+          showShapes={showShapeProperties}
+          setShowShapes={setShowShapeProperties}
+          closeAllDropdowns={closeAllDropdowns}
+        />
 
-        <EraserSelector />
+        <EraserSelector 
+          showEraser={showEraserProperties}
+          setShowEraser={setShowEraserProperties}
+          closeAllDropdowns={closeAllDropdowns}
+        />
 
         <IconArrowBackUp
           className={`cursor-pointer ${
@@ -144,8 +192,15 @@ export default function ToolBar({
   );
 }
 
-function ShapeSelector() {
-  const [showShapes, setShowShapes] = useState(false);
+function ShapeSelector({
+  showShapes,
+  setShowShapes,
+  closeAllDropdowns,
+}: {
+  showShapes: boolean;
+  setShowShapes: (show: boolean) => void;
+  closeAllDropdowns: () => void;
+}) {
   const {
     borderColor,
     borderWidth,
@@ -160,16 +215,19 @@ function ShapeSelector() {
     <div className="relative">
       <IconShape
         className={clsx(
-          "cursor-pointer hover:text-blue-500",
+          "cursor-pointer hover:text-blue-500 toolbar-button",
           selectedTool.includes("add") &&
             selectedTool !== "addText" &&
             "text-blue-500"
         )}
-        onClick={() => setShowShapes((prev) => !prev)}
+        onClick={() => {
+          closeAllDropdowns();
+          setShowShapes(!showShapes);
+        }}
       />
 
       {showShapes && (
-        <div className="absolute top-10 left-0 bg-white shadow-md rounded-lg p-3 flex flex-col justify-between gap-4 w-60">
+        <div className="toolbar-dropdown absolute top-10 left-0 bg-white shadow-xl rounded-xl border-2 border-orange-200 p-4 flex flex-col justify-between gap-4 w-60 z-50">
           <div className="flex justify-between">
             <IconRectangle
               className={clsx(
@@ -221,28 +279,18 @@ function ShapeSelector() {
             </IconStar>
           </div>
           <hr />
-          <div className="flex flex-col gap-2">
-            <div className="flex justify-between items-center gap-2">
-              <label className="text-sm text-gray-600">Fill color:</label>
-              <hr />
-              <input
-                type="text"
-                value={fillColor}
-                onChange={(e) => setFillColor(e.target.value)}
-                className="border rounded px-2 py-1 text-sm w-37"
-              />
-            </div>
+          <div className="flex flex-col gap-3">
+            <MiniColorPicker
+              value={fillColor}
+              onChange={setFillColor}
+              label="Fill color"
+            />
 
-            <div className="flex justify-between items-center gap-2">
-              <label className="text-sm text-gray-600">Border color:</label>
-              <hr />
-              <input
-                type="text"
-                value={borderColor}
-                onChange={(e) => setBorderColor(e.target.value)}
-                className="border rounded px-2 py-1 text-sm w-37"
-              />
-            </div>
+            <MiniColorPicker
+              value={borderColor}
+              onChange={setBorderColor}
+              label="Border color"
+            />
 
             <div className="flex items-center justify-between gap-2">
               <label className="text-sm text-gray-600">Border size:</label>
@@ -252,8 +300,9 @@ function ShapeSelector() {
                 max={10}
                 defaultValue={borderWidth}
                 onChange={(e) => setBorderWidth(parseInt(e.target.value))}
-                className="accent-blue-500 w-37"
+                className="accent-orange-500 w-32"
               />
+              <span className="text-xs text-gray-500 w-8">{borderWidth}px</span>
             </div>
           </div>
         </div>
@@ -262,9 +311,16 @@ function ShapeSelector() {
   );
 }
 
-function EraserSelector() {
+function EraserSelector({
+  showEraser,
+  setShowEraser,
+  closeAllDropdowns,
+}: {
+  showEraser: boolean;
+  setShowEraser: (show: boolean) => void;
+  closeAllDropdowns: () => void;
+}) {
   const { setSelectedTool, selectedTool } = useWhiteBoardStore((s) => s);
-  const [showEraser, setShowEraser] = useState(false);
   const { eraserSize, setEraserSize } = useEraserStore((s) => s);
 
   const handleEraserSizePlus = () => {
@@ -284,16 +340,17 @@ function EraserSelector() {
     <div className="relative">
       <IconEraser
         className={clsx(
-          "cursor-pointer hover:text-blue-500",
+          "cursor-pointer hover:text-blue-500 toolbar-button",
           selectedTool === "eraser" && "text-blue-500"
         )}
         onClick={() => {
-          setShowEraser((prev) => !prev);
+          closeAllDropdowns();
+          setShowEraser(!showEraser);
           setSelectedTool("eraser");
         }}
       />
       {showEraser && (
-        <div className="absolute top-10 left-0 bg-white shadow-md rounded-lg p-3 flex gap-3">
+        <div className="toolbar-dropdown absolute top-10 left-0 bg-white shadow-xl rounded-xl border-2 border-orange-200 p-4 flex gap-3 z-50">
           <IconMinus
             className="cursor-pointer"
             onClick={handleEraserSizeMinus}
@@ -315,19 +372,27 @@ function EraserSelector() {
   );
 }
 
-function PenSelector() {
-  const [showColorPicker, setShowColorPicker] = useState(false);
+function PenSelector({
+  showColorPicker,
+  setShowColorPicker,
+  closeAllDropdowns,
+}: {
+  showColorPicker: boolean;
+  setShowColorPicker: (show: boolean) => void;
+  closeAllDropdowns: () => void;
+}) {
   const { selectedTool, setSelectedTool } = useWhiteBoardStore((s) => s);
 
   return (
     <div className="relative">
       <IconPencil
         className={clsx(
-          "cursor-pointer hover:text-blue-500",
+          "cursor-pointer hover:text-blue-500 toolbar-button",
           selectedTool === "pen" && "text-blue-500"
         )}
         onClick={() => {
-          setShowColorPicker((prev) => !prev);
+          closeAllDropdowns();
+          setShowColorPicker(!showColorPicker);
           setSelectedTool("pen");
         }}
       />
@@ -341,8 +406,15 @@ function PenSelector() {
   );
 }
 
-function TextSelector() {
-  const [showTextPanel, setShowTextPanel] = useState(false);
+function TextSelector({
+  showTextPanel,
+  setShowTextPanel,
+  closeAllDropdowns,
+}: {
+  showTextPanel: boolean;
+  setShowTextPanel: (show: boolean) => void;
+  closeAllDropdowns: () => void;
+}) {
   const { roomCode } = useRoomStore((s) => s);
 
   const {
@@ -369,16 +441,17 @@ function TextSelector() {
     <div className="relative">
       <IconTextCaption
         className={clsx(
-          "cursor-pointer hover:text-blue-500",
+          "cursor-pointer hover:text-blue-500 toolbar-button",
           selectedTool === "addText" && "text-blue-500"
         )}
         onClick={() => {
+          closeAllDropdowns();
           setSelectedTool("addText");
-          setShowTextPanel((prev) => !prev);
+          setShowTextPanel(!showTextPanel);
         }}
       />
       {showTextPanel && (
-        <div className="absolute top-10 left-0 bg-white shadow-md rounded-lg p-3 flex gap-3">
+        <div className="toolbar-dropdown absolute top-10 left-0 bg-white shadow-xl rounded-xl border-2 border-orange-200 p-4 flex gap-3 z-50">
           <div className="flex flex-col gap-2 w-60">
             <div className="flex items-center justify-between gap-2">
               <label className="text-sm text-gray-600">Text size:</label>
