@@ -1,13 +1,11 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { Header } from "../ui/components/Header";
 import { SearchAndFilters } from "../ui/components/SearchAndFilters";
 import { PostCard } from "../ui/components/PostCard";
 import { ImageModal } from "../ui/components/ImageModal";
-
-
-import { mockPosts } from "../data/mockData";
+import { LeaderboardService } from "../services/leaderboardService";
 import { Post, Votes, SortOption, TimeFilter } from "../types";
 
 export default function LeaderboardPage() {
@@ -18,92 +16,70 @@ export default function LeaderboardPage() {
   const [votes, setVotes] = useState<Votes>({});
   const [visiblePosts, setVisiblePosts] = useState<number>(6);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [filteredPosts, setFilteredPosts] = useState<Post[]>([]);
 
 
-  const filteredAndSortedPosts = useMemo((): Post[] => {
-    let filtered = mockPosts.filter((post: Post) =>
-      [post.title, post.user].some((field) =>
-        field.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    );
-
-    if (timeFilter !== "all") {
-      const now = Date.now();
-      filtered = filtered.filter((post: Post) => {
-        const createdAt = new Date(post.createdAt).getTime();
-        const timeDiff = now - createdAt;
-        
-        switch (timeFilter) {
-          case "1h":
-            return timeDiff <= 1 * 60 * 60 * 1000;
-          case "24h":
-            return timeDiff <= 24 * 60 * 60 * 1000;
-          case "7d":
-            return timeDiff <= 7 * 24 * 60 * 60 * 1000;
-          case "30d":
-            return timeDiff <= 30 * 24 * 60 * 60 * 1000;
-          default:
-            return true;
-        }
-      });
-    }
-
-    const sorted = [...filtered];
-    switch (sortBy) {
-      case "trending":
-        sorted.sort((a, b) => {
-          if (a.trending && !b.trending) return -1;
-          if (!a.trending && b.trending) return 1;
-          return b.upvotes - a.upvotes;
-        });
-        break;
-      case "top":
-        sorted.sort((a, b) => b.upvotes - a.upvotes);
-        break;
-      case "recent":
-        sorted.sort(
-          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  // Fetch posts from database
+  useEffect(() => {
+    const fetchPosts = async () => {
+      setIsLoading(true);
+      try {
+        const fetchedPosts = await LeaderboardService.getFilteredPosts(
+          searchQuery,
+          sortBy,
+          timeFilter
         );
-        break;
-      case "views":
-        sorted.sort((a, b) => b.views - a.views);
-        break;
-      default:
-        break;
-    }
+        setFilteredPosts(fetchedPosts);
+      } catch (error) {
+        console.error('❌ Error fetching posts:', error);
+        setFilteredPosts([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-    console.log('Filter Debug:', {
-      searchQuery,
-      sortBy,
-      timeFilter,
-      totalPosts: mockPosts.length,
-      filteredCount: filtered.length,
-      sortedCount: sorted.length,
-      currentTime: new Date().toISOString(),
-      samplePost: sorted[0] ? {
-        id: sorted[0].id,
-        title: sorted[0].title,
-        createdAt: sorted[0].createdAt,
-        time: sorted[0].time
-      } : null
-    });
-
-    return sorted;
+    fetchPosts();
   }, [searchQuery, sortBy, timeFilter]);
 
   // Reset visible posts when filters change
-  React.useEffect(() => {
+  useEffect(() => {
     setVisiblePosts(6);
   }, [searchQuery, sortBy, timeFilter]);
 
-  const handleVote = (postId: number, type: "up" | "down"): void => {
-    setVotes((prev: Votes) => {
-      const current = prev[postId] || { up: false, down: false };
-      return {
+  const handleVote = async (postId: number, type: "up" | "down"): Promise<void> => {
+    const current = votes[postId] || { up: false, down: false };
+    const newVoteState = !current[type];
+    
+    // Update local state immediately for better UX
+    setVotes((prev: Votes) => ({
+      ...prev,
+      [postId]: { ...current, [type]: newVoteState },
+    }));
+
+    // Update database
+    try {
+      await LeaderboardService.updateVote(postId, type, newVoteState);
+      
+      // Update the post in the filtered posts array
+      setFilteredPosts(prev => prev.map(post => {
+        if (post.id === postId) {
+          return {
+            ...post,
+            [type === 'up' ? 'upvotes' : 'downvotes']: 
+              post[type === 'up' ? 'upvotes' : 'downvotes'] + (newVoteState ? 1 : -1)
+          };
+        }
+        return post;
+      }));
+    } catch (error) {
+      console.error('Error updating vote:', error);
+      // Revert local state on error
+      setVotes((prev: Votes) => ({
         ...prev,
-        [postId]: { ...current, [type]: !current[type] },
-      };
-    });
+        [postId]: current,
+      }));
+    }
   };
 
   
@@ -134,19 +110,14 @@ export default function LeaderboardPage() {
   };
 
   const handleLoadMore = (): void => {
-    setIsLoading(true);
-    // Simulate loading delay
-    setTimeout(() => {
-      setVisiblePosts(prev => Math.min(prev + 6, filteredAndSortedPosts.length));
-      setIsLoading(false);
-    }, 500);
+    setVisiblePosts(prev => Math.min(prev + 6, filteredPosts.length));
   };
 
   // Infinite scroll effect
-  React.useEffect(() => {
+  useEffect(() => {
     const handleScroll = () => {
       if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 1000) {
-        if (visiblePosts < filteredAndSortedPosts.length && !isLoading) {
+        if (visiblePosts < filteredPosts.length && !isLoading) {
           handleLoadMore();
         }
       }
@@ -154,47 +125,78 @@ export default function LeaderboardPage() {
 
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [visiblePosts, filteredAndSortedPosts.length, isLoading]);
+  }, [visiblePosts, filteredPosts.length, isLoading]);
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[#fff8f0]">
       {/* Header */}
-      <div className="bg-white/80 backdrop-blur-md border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
+      <div className="bg-gradient-to-br from-orange-25 to-amber-25">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
           <Header />
-          <SearchAndFilters
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-            sortBy={sortBy}
-            onSortChange={setSortBy}
-            timeFilter={timeFilter}
-            onTimeFilterChange={setTimeFilter}
-          />
+          <div className="mt-4">
+            <SearchAndFilters
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              sortBy={sortBy}
+              onSortChange={setSortBy}
+              timeFilter={timeFilter}
+              onTimeFilterChange={setTimeFilter}
+            />
+          </div>
         </div>
       </div>
 
       {/* Feed */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
-          {filteredAndSortedPosts.slice(0, visiblePosts).map((post, index) => (
-                         <PostCard
-               key={post.id}
-               post={post}
-               index={index}
-               votes={votes}
-               onVote={handleVote}
-              
-               onShare={handleShare}
-               onImageClick={setSelectedImg}
-             />
-          ))}
-        </div>
+        {filteredPosts.length === 0 && !isLoading ? (
+          /* Empty State */
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="w-32 h-32 mb-6 rounded-full bg-Accent flex items-center justify-center shadow-lg">
+              <svg className="w-16 h-16 text-Accent-Dark" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+              </svg>
+            </div>
+            <h3 className="text-2xl font-bold text-Primary-Text mb-2">No Artwork Found</h3>
+            <p className="text-Secondary-Text mb-6 max-w-md">
+              {searchQuery || timeFilter !== 'all' || sortBy !== 'trending' 
+                ? "No artwork matches your current filters. Try adjusting your search or filters."
+                : "No artwork has been shared yet."}
+            </p>
+            {(searchQuery || timeFilter !== 'all' || sortBy !== 'trending') && (
+              <button
+                onClick={() => {
+                  setSearchQuery('');
+                  setSortBy('trending');
+                  setTimeFilter('all');
+                }}
+                className="px-6 py-3 bg-Accent text-Primary-Text font-medium rounded-full hover:bg-Accent-Dark transition-all duration-200"
+              >
+                Clear Filters
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
+            {filteredPosts.slice(0, visiblePosts).map((post: Post, index: number) => (
+              <PostCard
+                key={post.id}
+                post={post}
+                index={index}
+                votes={votes}
+                onVote={handleVote}
+                onComment={() => {}}
+                onShare={handleShare}
+                onImageClick={setSelectedImg}
+              />
+            ))}
+          </div>
+        )}
 
         {/* Loading indicator */}
         {isLoading && (
           <div className="text-center mt-8">
-            <div className="inline-flex items-center gap-2 text-gray-600">
-              <div className="w-4 h-4 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+            <div className="inline-flex items-center gap-2 text-Secondary-Text">
+              <div className="w-4 h-4 border-2 border-Accent border-t-transparent rounded-full animate-spin"></div>
               Loading more artwork...
             </div>
           </div>
