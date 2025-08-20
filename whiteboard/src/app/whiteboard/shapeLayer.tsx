@@ -6,9 +6,8 @@ import TriangleShape from "./_shapes/triangle";
 import StarShape from "./_shapes/star";
 import { useShapeStore } from "./_store/shapeStore";
 import { useWhiteBoardStore } from "./_store/whiteboardStore";
-import { Socket } from "socket.io-client";
-import { DefaultEventsMap } from "socket.io";
 import { useRoomStore } from "./_store/roomStore";
+import { useSocketStore } from "./_store/socketStore";
 
 type ShapesLayerProps = {
   objects: CanvasObjectType[];
@@ -19,7 +18,6 @@ type ShapesLayerProps = {
   ) => void;
   selectedObjectId: string | null;
   setSelectedObjectId: (id: string) => void;
-  socket: Socket<DefaultEventsMap, DefaultEventsMap> | null;
 };
 
 export default function ShapeLayer({
@@ -28,14 +26,13 @@ export default function ShapeLayer({
   onChange,
   selectedObjectId,
   setSelectedObjectId,
-  socket,
 }: ShapesLayerProps) {
   const { setBorderColor, setBorderWidth, setFillColor } = useShapeStore(
     (s) => s
   );
   const { roomCode } = useRoomStore((s) => s);
   const { selectedTool } = useWhiteBoardStore((s) => s);
-
+  const { connect, socket } = useSocketStore();
   const shapes = [
     ...objects.filter((obj: CanvasObjectType) => obj.type === "shape"),
     ...(newObject && newObject.type === "shape" ? [newObject] : []),
@@ -69,10 +66,12 @@ export default function ShapeLayer({
           // e.target.getLayer().batchDraw(); // Redraw
         }
       },
-      onChange: (newAttrs: Partial<CanvasObjectType>) => {
+      onChange: async (newAttrs: Partial<CanvasObjectType>) => {
         onChange(shape.id, newAttrs);
-        if (socket && roomCode) {
+        if (roomCode) {
+          const socket = await connect();
           socket.emit("update-canvas-object", { roomCode, newAttrs });
+        } else {
         }
       },
     };

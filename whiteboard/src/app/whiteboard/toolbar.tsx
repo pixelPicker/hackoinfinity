@@ -38,13 +38,12 @@ import { Socket } from "socket.io-client";
 import { DefaultEventsMap } from "socket.io";
 import { useRoomStore } from "./_store/roomStore";
 import { useSession } from "next-auth/react";
+import { useSocketStore } from "./_store/socketStore";
 
 export default function ToolBar({
   boardRef,
-  socket,
 }: {
   boardRef: React.RefObject<Konva.Stage | null>;
-  socket: Socket<DefaultEventsMap, DefaultEventsMap> | null;
 }) {
   const {
     undo,
@@ -59,7 +58,6 @@ export default function ToolBar({
   const [toggleClearAllModal, setToggleClearAllModal] = useState(false);
   const { roomCode } = useRoomStore((s) => s);
   const { data } = useSession();
-
   // Global state for all toolbar dropdowns
   const [showPenProperties, setShowPenProperties] = useState(false);
   const [showShapeProperties, setShowShapeProperties] = useState(false);
@@ -88,6 +86,7 @@ export default function ToolBar({
     setShowEraserProperties(false);
     setShowTextProperties(false);
   };
+  const { socket, connect } = useSocketStore();
   return (
     <>
       <section className="fixed top-[20px] left-1/2 -translate-x-1/2 flex items-center gap-4 bg-white shadow-lg rounded-xl p-3 border border-gray-200">
@@ -109,7 +108,6 @@ export default function ToolBar({
         />
 
         <TextSelector 
-          socket={socket}
           showTextPanel={showTextProperties}
           setShowTextPanel={setShowTextProperties}
           closeAllDropdowns={closeAllDropdowns}
@@ -131,9 +129,10 @@ export default function ToolBar({
           className={`cursor-pointer ${
             undoStack.length === 0 ? "opacity-30" : "hover:text-blue-500"
           }`}
-          onClick={() => {
+          onClick={async () => {
             undo();
-            if (socket && roomCode) {
+            if (roomCode) {
+              const socket = await connect();
               socket.emit("undo", { roomCode });
             }
           }}
@@ -142,10 +141,11 @@ export default function ToolBar({
           className={`cursor-pointer ${
             redoStack.length === 0 ? "opacity-30" : "hover:text-blue-500"
           }`}
-          onClick={() => {
+          onClick={async () => {
             redo();
-            if (socket && roomCode) {
-              socket.emit("redo", { roomCode });
+            if (roomCode) {
+              const socket = await connect();
+              socket.emit("undo", { roomCode });
             }
           }}
         />
@@ -172,10 +172,11 @@ export default function ToolBar({
                 Cancel
               </button>
               <button
-                onClick={() => {
+                onClick={async () => {
                   resetCanvas();
-                  if (socket && roomCode) {
-                    socket.emit("reset-canvas", { roomCode });
+                  if (roomCode) {
+                    const socket = await connect();
+                    socket.emit("undo", { roomCode });
                   }
                   setToggleClearAllModal(false);
                 }}
@@ -406,12 +407,10 @@ function PenSelector({
 }
 
 function TextSelector({
-  socket,
   showTextPanel,
   setShowTextPanel,
   closeAllDropdowns,
 }: {
-  socket: Socket<DefaultEventsMap, DefaultEventsMap> | null;
   showTextPanel: boolean;
   setShowTextPanel: (show: boolean) => void;
   closeAllDropdowns: () => void;
@@ -437,7 +436,7 @@ function TextSelector({
     textSize,
     textStyle,
   } = useTextStore((s) => s);
-
+  const { connect, socket } = useSocketStore();
   return (
     <div className="relative">
       <IconTextCaption
@@ -461,12 +460,13 @@ function TextSelector({
                 min={1}
                 max={100}
                 defaultValue={textSize}
-                onChange={(e) => {
+                onChange={async (e) => {
                   setTextSize(parseInt(e.target.value));
                   updateCanvasObject(selectedObjectId, {
                     fontSize: parseInt(e.target.value),
                   });
-                  if (socket && roomCode && selectedObjectId) {
+                  if (roomCode && selectedObjectId) {
+                    const socket = await connect();
                     socket.emit("update-canvas-object", {
                       roomCode,
                       object: canvasObjects.find(
@@ -486,12 +486,13 @@ function TextSelector({
                 min={0}
                 max={5}
                 defaultValue={lineSpacing}
-                onChange={(e) => {
+                onChange={async (e) => {
                   setLineSpacing(parseInt(e.target.value));
                   updateCanvasObject(selectedObjectId, {
                     lineHeight: parseInt(e.target.value),
                   });
-                  if (socket && roomCode && selectedObjectId) {
+                  if (roomCode && selectedObjectId) {
+                    const socket = await connect();
                     socket.emit("update-canvas-object", {
                       roomCode,
                       object: canvasObjects.find(
@@ -509,12 +510,13 @@ function TextSelector({
               <input
                 type="text"
                 value={textColor}
-                onChange={(e) => {
+                onChange={async (e) => {
                   setTextColor(e.target.value);
                   updateCanvasObject(selectedObjectId, {
                     fill: e.target.value,
                   });
-                  if (socket && roomCode && selectedObjectId) {
+                  if (roomCode && selectedObjectId) {
+                    const socket = await connect();
                     socket.emit("update-canvas-object", {
                       roomCode,
                       object: canvasObjects.find(
@@ -531,10 +533,11 @@ function TextSelector({
               <p className="text-sm text-gray-600 pb-2">Alignment:</p>
               <div className="flex items-center justify-between gap-2 px-10">
                 <IconAlignLeft
-                  onClick={() => {
+                  onClick={async () => {
                     setTextAlignment("left");
                     updateCanvasObject(selectedObjectId, { align: "left" });
-                    if (socket && roomCode && selectedObjectId) {
+                    if (roomCode && selectedObjectId) {
+                      const socket = await connect();
                       socket.emit("update-canvas-object", {
                         roomCode,
                         object: canvasObjects.find(
@@ -546,10 +549,11 @@ function TextSelector({
                 />
                 <span className="h-full w-[1px]"></span>
                 <IconAlignLeft
-                  onClick={() => {
+                  onClick={async () => {
                     setTextAlignment("center");
                     updateCanvasObject(selectedObjectId, { align: "center" });
-                    if (socket && roomCode && selectedObjectId) {
+                    if (selectedObjectId && roomCode) {
+                      const socket = await connect();
                       socket.emit("update-canvas-object", {
                         roomCode,
                         object: canvasObjects.find(
@@ -561,10 +565,11 @@ function TextSelector({
                 />
                 <span className="h-full w-[1px]"></span>
                 <IconAlignLeft
-                  onClick={() => {
+                  onClick={async () => {
                     setTextAlignment("right");
                     updateCanvasObject(selectedObjectId, { align: "right" });
-                    if (socket && roomCode && selectedObjectId) {
+                    if (selectedObjectId && roomCode) {
+                      const socket = await connect();
                       socket.emit("update-canvas-object", {
                         roomCode,
                         object: canvasObjects.find(

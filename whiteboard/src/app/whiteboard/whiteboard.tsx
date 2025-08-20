@@ -35,18 +35,10 @@ import {
 } from "@tabler/icons-react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import socket from "../api/socket";
-import { Socket } from "socket.io-client";
-import { DefaultEventsMap } from "socket.io";
 import { useRoomStore } from "./_store/roomStore";
+import { useSocketStore } from "./_store/socketStore";
 
-const WhiteBoard = ({
-  boardRef,
-  socket,
-}: {
-  boardRef: React.RefObject<Konva.Stage | null>;
-  socket: Socket<DefaultEventsMap, DefaultEventsMap> | null;
-}) => {
+const WhiteBoard = () => {
   const stageRef = useRef<Konva.Stage | null>(null);
   const [newObject, setNewObject] = useState<CanvasObjectType | null>(null);
   const [zoomLevel, setZoomLevel] = useState(1);
@@ -58,7 +50,7 @@ const WhiteBoard = ({
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
-  // const [roomCode, setRoomCode] = useState("");
+  const { connect, socket } = useSocketStore();
   const [joinCode, setJoinCode] = useState("");
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -94,10 +86,11 @@ const WhiteBoard = ({
   const { borderColor, borderWidth, fillColor } = useShapeStore((s) => s);
   const [isInProgress, setIsInProgress] = useState(false);
 
-  const handleDelete = useCallback(() => {
+  const handleDelete = useCallback(async () => {
     if (selectedObjectId) {
       deleteCanvasObject(selectedObjectId);
-      if (roomCode && socket) {
+      if (roomCode) {
+        const socket = await connect();
         socket.emit("delete-canvas-object", {
           room: roomCode,
           id: selectedObjectId,
@@ -293,13 +286,14 @@ const WhiteBoard = ({
     }
   };
 
-  const handleMouseUp = () => {
+  const handleMouseUp = async () => {
     if (isInProgress && newObject) {
       addCanvasObject(newObject);
 
       console.log({ socket, roomCode });
 
-      if (socket && roomCode) {
+      if (roomCode) {
+        const socket = await connect();
         socket.emit("add-canvas-object", { room: roomCode, object: newObject });
       }
       if (selectedTool !== "pen" && selectedTool !== "eraser") {
@@ -360,7 +354,6 @@ const WhiteBoard = ({
           selectedObjectId={selectedObjectId}
           setSelectedObjectId={selectCanvasObject}
           onChange={updateCanvasObject}
-          socket={socket}
         />
         <TextLayer
           objects={canvasObjects}
@@ -369,7 +362,6 @@ const WhiteBoard = ({
           setSelectedObjectId={selectCanvasObject}
           onChange={updateCanvasObject}
           zoomLevel={zoomLevel}
-          socket={socket}
         />
       </Stage>
 
