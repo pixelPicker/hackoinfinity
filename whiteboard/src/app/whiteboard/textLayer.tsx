@@ -7,6 +7,7 @@ import TextField from "./_text/textField";
 import { Socket } from "socket.io-client";
 import { DefaultEventsMap } from "socket.io";
 import { useRoomStore } from "./_store/roomStore";
+import { useSocketStore } from "./_store/socketStore";
 
 type Props = {
   objects: CanvasObjectType[];
@@ -18,7 +19,6 @@ type Props = {
     newAttrs: Partial<CanvasObjectType>
   ) => void;
   zoomLevel: number;
-  socket: Socket<DefaultEventsMap, DefaultEventsMap> | null;
 };
 
 export default function TextLayer({
@@ -28,7 +28,6 @@ export default function TextLayer({
   setSelectedObjectId,
   onChange,
   zoomLevel,
-  socket,
 }: Props) {
   const {
     textSize,
@@ -49,6 +48,7 @@ export default function TextLayer({
     ...objects.filter((obj: CanvasObjectType) => obj.type === "text"),
     ...(newObject && newObject.type === "text" ? [newObject] : []),
   ];
+  const { connect, socket } = useSocketStore();
 
   return (
     <Layer>
@@ -89,9 +89,10 @@ export default function TextLayer({
             // e.target.moveToTop(); // Upon select, move the object to top of canvas
             // e.target.getLayer().batchDraw(); // Redraw
           }}
-          onChange={(newAttrs: Partial<CanvasObjectType>) => {
+          onChange={async (newAttrs: Partial<CanvasObjectType>) => {
             onChange(text.id, newAttrs);
-            if (socket && roomCode) {
+            if (roomCode) {
+              const socket = await connect();
               socket.emit("update-canvas-object", { roomCode, newAttrs });
             }
           }}

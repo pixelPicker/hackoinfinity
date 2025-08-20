@@ -35,7 +35,6 @@ io.on("connection", (socket) => {
 
   // CREATE ROOM
   socket.on("create-room", async ({ roomCode, userId }) => {
-    console.log(1234);
     try {
       let room = await prisma.room.findUnique({
         where: { roomCode },
@@ -229,12 +228,12 @@ io.on("connection", (socket) => {
     console.log({ room, object, event: "add" });
     socket.to(room).emit("add-canvas-object", { object });
   });
-  
+
   socket.on("update-canvas-object", ({ room, object }) => {
     console.log({ room, object, event: "update" });
     socket.to(room).emit("update-canvas-object", { object });
   });
-  
+
   socket.on("delete-canvas-object", ({ room, id }) => {
     console.log({ room, id, event: "delete" });
     socket.to(room).emit("delete-canvas-object", { id });

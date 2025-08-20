@@ -21,6 +21,7 @@ import clsx from "clsx";
 import { useRouter } from "next/navigation";
 import { useWhiteBoardStore } from "./_store/whiteboardStore";
 import { useRoomStore } from "./_store/roomStore";
+import { useSocketStore } from "./_store/socketStore";
 
 const Whiteboard = dynamic(() => import("./whiteboard"), { ssr: false });
 const ToolBar = dynamic(() => import("./toolbar"), { ssr: false });
@@ -42,69 +43,68 @@ export default function App() {
   const [showJoinModal, setShowJoinModal] = useState(false);
 
   const [joinCode, setJoinCode] = useState("");
+  const { connect, disconnect, socket } = useSocketStore((s) => s);
 
   useEffect(() => {
-    if (!socket) {
-      console.log("connecting socket");
-      socket = io("http://localhost:8000", {
-        transports: ["polling", "websocket"], // polling first, then websocket
-        upgrade: true,
+    connect();
+  }, []);
+
+  useEffect(() => {
+    if (socket) {
+      socket.on("created-room", (room) => {
+        console.log("Room created:", room);
+        setRoom(room);
+        setRoomCode(room.roomCode);
+        setRoomActive(true);
+        setUsers(room.participants.map((p: { user: User }) => p.user));
+      });
+
+      socket.on("room-users", (userList: User[]) => {
+        setUsers(userList);
+      });
+
+      socket.on("joined-room", (room) => {
+        console.log("Room joined", room);
+        setRoom(room);
+        setRoomActive(true);
+        setRoomCode(room.roomCode);
+        setShowCreateModal(false);
+        setShowJoinModal(false);
+      });
+
+      socket.on("room:error", (msg: string) => {});
+
+      socket.on("add-canvas-object", ({ object }) => {
+        useWhiteBoardStore.getState().addCanvasObject(object);
+      });
+
+      socket.on("update-canvas-object", ({ object }) => {
+        useWhiteBoardStore.getState().updateCanvasObject(object.id, object);
+      });
+
+      socket.on("delete-canvas-object", ({ id }) => {
+        useWhiteBoardStore.getState().deleteCanvasObject(id);
+      });
+
+      socket.on("reset-canvas", () => {
+        useWhiteBoardStore.getState().resetCanvas();
+      });
+
+      socket.on("undo", () => {
+        useWhiteBoardStore.getState().undo();
+      });
+
+      socket.on("redo", () => {
+        useWhiteBoardStore.getState().redo();
       });
     }
-    socket.on("connect_error", (err) => {
-      console.log(err.message);
-    });
-
-    socket.on("created-room", (room) => {
-      console.log("Room created:", room);
-      setRoom(room);
-      setRoomCode(room.roomCode);
-      setRoomActive(true);
-      setUsers(room.participants.map((p: { user: User }) => p.user));
-    });
-
-    socket.on("room-users", (userList: User[]) => {
-      setUsers(userList);
-    });
-
-    socket.on("joined-room", (room) => {
-      console.log("Room joined", room);
-      setRoom(room);
-      setRoomActive(true);
-      setRoomCode(room.roomCode);
-      setShowCreateModal(false);
-      setShowJoinModal(false);
-    });
-
-    socket.on("room:error", (msg: string) => {});
-
-    socket.on("add-canvas-object", ({ object }) => {
-      useWhiteBoardStore.getState().addCanvasObject(object);
-    });
-
-    socket.on("update-canvas-object", ({ object }) => {
-      useWhiteBoardStore.getState().updateCanvasObject(object.id, object);
-    });
-
-    socket.on("delete-canvas-object", ({ id }) => {
-      useWhiteBoardStore.getState().deleteCanvasObject(id);
-    });
-
-    socket.on("reset-canvas", () => {
-      useWhiteBoardStore.getState().resetCanvas();
-    });
-
-    socket.on("undo", () => {
-      useWhiteBoardStore.getState().undo();
-    });
-
-    socket.on("redo", () => {
-      useWhiteBoardStore.getState().redo();
-    });
-
     return () => {
-      socket?.disconnect();
-      socket?.off("room:users");
+      socket?.off("disconnect", (reason) => {
+        disconnect();
+        console.log("Disconnected:", reason);
+      });
+      socket?.off("created-room");
+      socket?.off("room-users");
       socket?.off("joined-room");
       socket?.off("add-canvas-object");
       socket?.off("update-canvas-object");
@@ -115,7 +115,7 @@ export default function App() {
       setRoom(null);
       setRoomActive(false);
     };
-  }, []);
+  }, [socket]);
 
   const resetState = () => {
     setShowCreateModal(false);
@@ -149,8 +149,9 @@ export default function App() {
     socket?.emit("join-room", { roomCode: joinCode, userId: session.user.id });
   };
 
-  const handleLeaveRoom = () => {
-    if (socket) {
+  const handleLeaveRoom = async () => {
+    if (roomCode) {
+      const socket = await connect();
       socket.emit("leave-room", { roomCode });
     }
     setRoomActive(false);
@@ -171,8 +172,8 @@ export default function App() {
   return (
     <main className="w-screen h-screen bg-Surface relative">
       {/* Whiteboard + Toolbar */}
-      <Whiteboard boardRef={whiteboardRef} socket={socket} />
-      <ToolBar boardRef={whiteboardRef} socket={socket} />
+      <Whiteboard />
+      <ToolBar boardRef={whiteboardRef} />
 
       {/* Sidebar (only when inside a room) */}
       {roomActive && (
