@@ -87,7 +87,6 @@ export default function App() {
   useEffect(() => {
     if (socket) {
       socket.on("created-room", (room) => {
-        console.log("Room created:", room);
         setRoom(room);
         setRoomCode(room.roomCode);
         setRoomActive(true);
@@ -99,7 +98,6 @@ export default function App() {
       });
 
       socket.on("joined-room", (room) => {
-        console.log("Room joined", room);
         setRoom(room);
         setRoomActive(true);
         setRoomCode(room.roomCode);
@@ -159,12 +157,10 @@ export default function App() {
   const handleCreateRoom = async () => {
     resetState();
     if (!session || !session.user || !session.user.id) {
-      console.log("No habla inges?", session);
       router.push("/auth/login");
       return;
     }
     const code = Math.random().toString(36).substring(2, 8).toUpperCase();
-    console.log("Room creation request");
     setRoomCode(code);
     const socket = await connect();
     socket.emit("create-room", {
@@ -296,7 +292,6 @@ function HeaderButtons({
     router.push("/auth/login");
     setShowUserDropdown(false);
   };
-  console.log(roomActive);
   return (
     <div className="fixed top-[20px] right-[10px] flex gap-4">
       {/* Room Button - Now on the left */}
