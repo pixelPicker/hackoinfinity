@@ -3,29 +3,27 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model User {
-  id            String    @id @default(cuid())
+  id            String            @id @default(cuid())
   name          String?
-  email         String    @unique
+  email         String            @unique
   emailVerified DateTime?
   password      String?
   image         String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  // Relations
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
   accounts      Account[]
-  sessions      Session[]
   posts         Post[]
+  participants  RoomParticipant[]
+  rooms         Rooms[]
+  sessions      Session[]
   votes         Vote[]
-  rooms         Room[]
 }
 
-// Auth.js required models
 model Account {
   id                String  @id @default(cuid())
   userId            String
@@ -59,6 +57,7 @@ model VerificationToken {
 
   @@unique([identifier, token])
 }
+
 model Post {
   id          Int      @id @default(autoincrement())
   title       String
@@ -72,30 +71,64 @@ model Post {
   trending    Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
   authorId    String
   author      User     @relation(fields: [authorId], references: [id])
   votes       Vote[]
 }
 
 model Vote {
-  id     Int     @id @default(autoincrement())
-  type   String  // "up" or "down"
+  id     Int    @id @default(autoincrement())
+  type   String
   userId String
   postId Int
-  
-  user   User    @relation(fields: [userId], references: [id])
-  post   Post    @relation(fields: [postId], references: [id])
-  
+  post   Post   @relation(fields: [postId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
+
   @@unique([userId, postId])
 }
 
-model Room {
-  id          String   @id @default(cuid())
-  roomCode    String   @unique
-  createdById String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+model Rooms {
+  id           String            @id @default(cuid())
+  roomCode     String            @unique
+  createdById  String
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  objects      CanvasObject[]
+  participants RoomParticipant[]
+  createdBy    User              @relation(fields: [createdById], references: [id])
+}
 
-  createdBy   User     @relation(fields: [createdById], references: [id])
+model RoomParticipant {
+  id       String   @id @default(cuid())
+  roomId   String
+  userId   String
+  joinedAt DateTime @default(now())
+  room     Rooms    @relation(fields: [roomId], references: [id])
+  user     User     @relation(fields: [userId], references: [id])
+}
+
+model CanvasObject {
+  id             String   @id @default(cuid())
+  type           String
+  shapeName      String?
+  stroke         String?
+  strokeWidth    Int?
+  fill           String?
+  points         Json?
+  x              Float?
+  y              Float?
+  width          Float?
+  height         Float?
+  rotation       Float?
+  text           String?
+  fontSize       Int?
+  fontFamily     String?
+  fontStyle      String?
+  textDecoration String?
+  align          String?
+  lineHeight     Float?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  roomId         String
+  room           Rooms    @relation(fields: [roomId], references: [id], onDelete: Cascade)
 }

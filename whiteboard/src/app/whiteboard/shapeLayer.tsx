@@ -70,7 +70,10 @@ export default function ShapeLayer({
         onChange(shape.id, newAttrs);
         if (roomCode) {
           const socket = await connect();
-          socket.emit("update-canvas-object", { roomCode, newAttrs });
+          socket.emit("update-canvas-object", {
+            room: roomCode,
+            object: newAttrs,
+          });
         } else {
         }
       },

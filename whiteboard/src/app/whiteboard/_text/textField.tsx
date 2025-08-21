@@ -3,6 +3,9 @@ import { Text, Transformer } from "react-konva";
 import { CanvasObjectType } from "../types";
 import Konva from "konva";
 import { TEXT_MIN_HEIGHT, TEXT_MIN_WIDTH } from "./utils";
+import { useSocketStore } from "../_store/socketStore";
+import { useRoomStore } from "../_store/roomStore";
+import { useWhiteBoardStore } from "../_store/whiteboardStore";
 
 type Props = {
   objectProps: Partial<CanvasObjectType>;
@@ -21,6 +24,9 @@ export default function TextField({
 }: Props) {
   const textRef = useRef<Konva.Text>(null);
   const trRef = useRef<Konva.Transformer>(null);
+  const { connect } = useSocketStore();
+  const { roomCode } = useRoomStore((s) => s);
+  const { selectedObjectId } = useWhiteBoardStore((s) => s);
 
   useEffect(() => {
     if (isSelected && trRef.current && textRef.current) {
@@ -169,14 +175,18 @@ export default function TextField({
         }
       });
 
-      const handleOutsideClick = (e: any) => {
+      const handleOutsideClick = async (e: any) => {
         if (e.target !== textarea) {
           onChange({
             ...selectedProps,
             text: textarea.value,
-          }); // Update text content
-
+          });
           removeTextarea();
+          const socket = await connect();
+          socket.emit("update-canvas-object", {
+            room: roomCode,
+            object: { text: textarea.value },
+          });
         }
       };
 

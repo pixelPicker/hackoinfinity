@@ -40,10 +40,8 @@ import { useSocketStore } from "./_store/socketStore";
 const Whiteboard = dynamic(() => import("./whiteboard"), { ssr: false });
 const ToolBar = dynamic(() => import("./toolbar"), { ssr: false });
 
-let socket: Socket | null = null;
-
 export default function App() {
-  const whiteboardRef = useRef<Konva.Stage>(null);
+  const boardRef = useRef<Konva.Stage>(null);
   const { data: session } = useSession();
   const router = useRouter();
 
@@ -66,24 +64,26 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    
     // Close dropdowns when clicking outside
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
       // Check if click is outside dropdown containers
-      if (!target.closest('.dropdown-container') && !target.closest('.dropdown-menu')) {
+      if (
+        !target.closest(".dropdown-container") &&
+        !target.closest(".dropdown-menu")
+      ) {
         setShowUserDropdown(false);
         setShowRoomDropdown(false);
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    
-    const cleanup = () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };}, []};
-  
-  
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
   useEffect(() => {
     if (socket) {
       socket.on("created-room", (room) => {
@@ -97,17 +97,7 @@ export default function App() {
       socket.on("room-users", (userList: User[]) => {
         setUsers(userList);
       });
-    socket.on("created-room", (room) => {
-      console.log("Room created:", room);
-      setRoom(room);
-      setRoomCode(room.roomCode);
-      setRoomActive(true);
-      setUsers(room.participants.map((p: { user: User }) => p.user));
-    });
 
-    socket.on("room-users", (userList: User[]) => {
-      setUsers(userList);
-    });
       socket.on("joined-room", (room) => {
         console.log("Room joined", room);
         setRoom(room);
@@ -144,10 +134,6 @@ export default function App() {
       });
     }
     return () => {
-      socket?.off("disconnect", (reason) => {
-        disconnect();
-        console.log("Disconnected:", reason);
-      });
       socket?.off("created-room");
       socket?.off("room-users");
       socket?.off("joined-room");
@@ -159,7 +145,6 @@ export default function App() {
       socket?.off("redo");
       setRoom(null);
       setRoomActive(false);
-      cleanup();
     };
   }, [socket]);
 
@@ -171,9 +156,9 @@ export default function App() {
     setShowRoomDropdown(false);
   };
 
-  const handleCreateRoom = () => {
+  const handleCreateRoom = async () => {
     resetState();
-    if (!session || !session.user || !session.user.email) {
+    if (!session || !session.user || !session.user.id) {
       console.log("No habla inges?", session);
       router.push("/auth/login");
       return;
@@ -181,7 +166,11 @@ export default function App() {
     const code = Math.random().toString(36).substring(2, 8).toUpperCase();
     console.log("Room creation request");
     setRoomCode(code);
-    socket?.emit("create-room", { roomCode: code, userId: session.user?.email });
+    const socket = await connect();
+    socket.emit("create-room", {
+      roomCode: code,
+      userId: session.user?.id,
+    });
   };
 
   const handleJoinRoomClick = () => {
@@ -190,11 +179,15 @@ export default function App() {
     setShowJoinModal(true);
   };
 
-  const handleJoinRoom = (e: React.FormEvent) => {
-    if (!session || !session.user || !session.user.email) return;
+  const handleJoinRoom = async (e: React.FormEvent) => {
+    if (!session || !session.user || !session.user.id) return;
     e.preventDefault();
     if (joinCode.length !== 6) return;
-    socket?.emit("join-room", { roomCode: joinCode, userId: session.user?.email });
+    const socket = await connect();
+    socket.emit("join-room", {
+      roomCode: joinCode,
+      userId: session.user?.id,
+    });
   };
 
   const handleLeaveRoom = async () => {
@@ -220,8 +213,8 @@ export default function App() {
   return (
     <main className="w-screen h-screen bg-Surface relative">
       {/* Whiteboard + Toolbar */}
-      <Whiteboard />
-      <ToolBar boardRef={whiteboardRef} />
+      <Whiteboard boardRef={boardRef} />
+      <ToolBar boardRef={boardRef} />
 
       {/* Sidebar (only when inside a room) */}
       {roomActive && (
@@ -231,47 +224,47 @@ export default function App() {
           users={users}
         />
       )}
-      {!roomActive && (
-        <div className="absolute top-4 right-4 z-50">
-          <div className={dmsans.className}>
-            <HeaderButtons
-              session={session}
-              showUserDropdown={showUserDropdown}
-              setShowUserDropdown={setShowUserDropdown}
-              showRoomDropdown={showRoomDropdown}
-              setShowRoomDropdown={setShowRoomDropdown}
-              handleCreateRoom={handleCreateRoom}
-              handleJoinRoomClick={handleJoinRoomClick}
-              router={router}
+      <div className="absolute top-4 right-4 z-50">
+        <div className={dmsans.className}>
+          <HeaderButtons
+            roomActive={roomActive}
+            session={session}
+            showUserDropdown={showUserDropdown}
+            setShowUserDropdown={setShowUserDropdown}
+            showRoomDropdown={showRoomDropdown}
+            setShowRoomDropdown={setShowRoomDropdown}
+            handleCreateRoom={handleCreateRoom}
+            handleJoinRoomClick={handleJoinRoomClick}
+            router={router}
+          />
+
+          {showCreateModal && (
+            <CreateRoomModal
+              copyToClipBoard={copyToClipboard}
+              handleStartRoom={handleStartRoom}
+              resetState={resetState}
+              roomCode={roomCode}
             />
+          )}
 
-            {showCreateModal && (
-              <CreateRoomModal
-                copyToClipBoard={copyToClipboard}
-                handleStartRoom={handleStartRoom}
-                resetState={resetState}
-                roomCode={roomCode}
-              />
-            )}
-
-            {showJoinModal && (
-              <ShowJoinRoomModal
-                handleJoinRoom={(e: React.FormEvent<Element>) =>
-                  handleJoinRoom(e)
-                }
-                joinCode={joinCode}
-                resetState={resetState}
-                setJoinCode={setJoinCode}
-              />
-            )}
-          </div>
+          {showJoinModal && (
+            <ShowJoinRoomModal
+              handleJoinRoom={(e: React.FormEvent<Element>) =>
+                handleJoinRoom(e)
+              }
+              joinCode={joinCode}
+              resetState={resetState}
+              setJoinCode={setJoinCode}
+            />
+          )}
         </div>
-      )}
+      </div>
     </main>
   );
 }
 
 function HeaderButtons({
+  roomActive,
   session,
   showUserDropdown,
   setShowUserDropdown,
@@ -281,6 +274,7 @@ function HeaderButtons({
   handleJoinRoomClick,
   router,
 }: {
+  roomActive: boolean;
   session: any;
   showUserDropdown: boolean;
   setShowUserDropdown: (show: boolean) => void;
@@ -290,6 +284,8 @@ function HeaderButtons({
   handleJoinRoomClick: () => void;
   router: any;
 }) {
+  const { connect } = useSocketStore();
+  const { roomCode } = useRoomStore();
   const handleLogout = async () => {
     const { signOut } = await import("next-auth/react");
     await signOut();
@@ -300,34 +296,57 @@ function HeaderButtons({
     router.push("/auth/login");
     setShowUserDropdown(false);
   };
-
+  console.log(roomActive);
   return (
     <div className="fixed top-[20px] right-[10px] flex gap-4">
       {/* Room Button - Now on the left */}
       <div className="relative dropdown-container">
-        <button
-          onClick={() => {
-            setShowRoomDropdown(!showRoomDropdown);
-            setShowUserDropdown(false);
-          }}
-          className={clsx(
-            "flex items-center gap-2 select-none cursor-pointer transition-all duration-200 bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white p-3 shadow-lg rounded-lg font-medium"
-          )}
-        >
-          <IconDoor size={20} />
-          <span className="text-sm font-medium">Room</span>
-          <IconChevronDown size={16} className={clsx("transition-transform duration-200", showRoomDropdown && "rotate-180")} />
-        </button>
+        {roomActive ? (
+          <button
+            onClick={async () => {
+              const socket = await connect();
+              if (roomCode) {
+                socket.emit("leave-room", { roomCode });
+              }
+            }}
+            className={clsx(
+              "flex items-center gap-2 select-none cursor-pointer transition-all duration-200 bg-red-500 hover:bg-red-600 active:bg-red-700 text-white p-3 shadow-lg rounded-lg font-medium"
+            )}
+          >
+            <IconDoorExit size={20} />
+            <span className="text-sm font-medium">Leave</span>
+          </button>
+        ) : (
+          <button
+            onClick={() => {
+              setShowRoomDropdown(!showRoomDropdown);
+              setShowUserDropdown(false);
+            }}
+            className={clsx(
+              "flex items-center gap-2 select-none cursor-pointer transition-all duration-200 bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white p-3 shadow-lg rounded-lg font-medium"
+            )}
+          >
+            <IconDoor size={20} />
+            <span className="text-sm font-medium">Room</span>
+            <IconChevronDown
+              size={16}
+              className={clsx(
+                "transition-transform duration-200",
+                showRoomDropdown && "rotate-180"
+              )}
+            />
+          </button>
+        )}
 
         {/* Room Dropdown */}
         {showRoomDropdown && (
-          <div className="dropdown-menu absolute top-full left-0 mt-2 w-48 bg-white rounded-xl shadow-xl border-2 border-orange-200 py-2 z-50 animate-in slide-in-from-top-2 duration-200">
+          <div className="dropdown-menu absolute top-full left-0 mt-2 w-48 bg-white rounded-xl shadow-xl border-2 border-orange-200 z-50 animate-in slide-in-from-top-2 duration-200">
             <button
               onClick={() => {
                 handleCreateRoom();
                 setShowRoomDropdown(false);
               }}
-              className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-700 flex items-center gap-3 cursor-pointer transition-colors duration-150 font-medium"
+              className="w-full rounded-t-xl text-left px-4 py-3 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-700 flex items-center gap-3 cursor-pointer transition-colors duration-150 font-medium"
             >
               <IconCircleDashedPlus size={18} className="text-orange-500" />
               Create Room
@@ -337,7 +356,7 @@ function HeaderButtons({
                 handleJoinRoomClick();
                 setShowRoomDropdown(false);
               }}
-              className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-700 flex items-center gap-3 cursor-pointer transition-colors duration-150 font-medium"
+              className="w-full rounded-b-xl text-left px-4 py-3 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-700 flex items-center gap-3 cursor-pointer transition-colors duration-150 font-medium"
             >
               <IconUser size={18} className="text-orange-500" />
               Join Room
@@ -361,21 +380,31 @@ function HeaderButtons({
           <span className="text-sm font-medium">
             {session?.user?.name || "Guest"}
           </span>
-          <IconChevronDown size={16} className={clsx("transition-transform duration-200", showUserDropdown && "rotate-180")} />
+          <IconChevronDown
+            size={16}
+            className={clsx(
+              "transition-transform duration-200",
+              showUserDropdown && "rotate-180"
+            )}
+          />
         </button>
 
         {/* User Dropdown */}
         {showUserDropdown && (
-          <div className="dropdown-menu absolute top-full right-0 mt-2 w-52 bg-white rounded-xl shadow-xl border-2 border-gray-200 py-2 z-50 animate-in slide-in-from-top-2 duration-200">
+          <div className="dropdown-menu absolute top-full right-0 mt-2 w-52 bg-white rounded-xl shadow-xl border-2 border-gray-200 z-50 animate-in slide-in-from-top-2 duration-200">
             {session ? (
               <>
                 <div className="px-4 py-3 text-sm text-gray-700 border-b border-gray-100">
-                  <div className="font-semibold text-gray-900">{session.user?.name}</div>
-                  <div className="text-gray-500 text-xs mt-1">{session.user?.email}</div>
+                  <div className="font-semibold text-gray-900">
+                    {session.user?.name}
+                  </div>
+                  <div className="text-gray-500 text-xs mt-1">
+                    {session.user?.email}
+                  </div>
                 </div>
                 <button
                   onClick={handleLogout}
-                  className="w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50 hover:text-red-700 flex items-center gap-3 cursor-pointer transition-colors duration-150 font-medium"
+                  className="w-full text-left rounded-b-xl px-4 py-3 text-sm text-red-600 hover:bg-red-50 hover:text-red-700 flex items-center gap-3 cursor-pointer transition-colors duration-150 font-medium"
                 >
                   <IconLogout size={18} />
                   Logout
@@ -531,15 +560,19 @@ function RoomInfoDump({
   users: User[];
 }) {
   const [isOpen, setIsOpen] = useState(true);
-
+  const { roomCode } = useRoomStore((s) => s);
   const router = useRouter();
   return (
     <aside
       className={clsx(
-        "absolute h-[calc(100vh-30px)] mt-[20px] top-0 left-1 z-50 bg-white shadow-lg rounded-lg border border-gray-300 p-2 flex flex-col gap-4 w-64 -translate-x-0 transition-all",
+        "absolute mt-[20px] top-0 left-1 z-50 bg-white shadow-lg rounded-lg border border-gray-300 p-2 flex flex-col gap-4 w-64 -translate-x-0 transition-all",
         !isOpen && "!bg-Surface !w-20 shadow-none transition-all border-none"
       )}
     >
+      <div className="flex justify-between p-[2px] items-center`">
+        <h3 className="text-gray-600">Room Code</h3>
+        <span className="ml-auto font-semibold">{roomCode}</span>
+      </div>
       <div className="flex-1 p-[2px]">
         <div className="flex justify-between w-full items-center mb-2">
           <h3 className={clsx("font-medium text-lg", !isOpen && "hidden")}>
@@ -561,21 +594,12 @@ function RoomInfoDump({
         <ul className={clsx(!isOpen && "hidden", "text-gray-700 m-2")}>
           {users.map((u, i) => (
             <li key={u.id} className="mb-1 flex gap-2">
-              <span className={spaceGrotesk.className}>{i}.</span>
+              <span className={spaceGrotesk.className}>{i + 1}.</span>
               <span>{u.name ?? "Anonymous"}</span>
             </li>
           ))}
         </ul>
       </div>
-      <button
-        onClick={handleLeaveRoom}
-        className={
-          "py-3 cursor-pointer bg-red-500 text-white rounded-lg shadow-md hover:bg-red-600 transition flex items-center gap-2 justify-center"
-        }
-      >
-        {isOpen && "Leave Room"}
-        <IconDoorExit size={20} />
-      </button>
     </aside>
   );
 }

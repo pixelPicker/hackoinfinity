@@ -48,7 +48,7 @@ export default function TextLayer({
     ...objects.filter((obj: CanvasObjectType) => obj.type === "text"),
     ...(newObject && newObject.type === "text" ? [newObject] : []),
   ];
-  const { connect, socket } = useSocketStore();
+  const { connect } = useSocketStore();
 
   return (
     <Layer>
@@ -60,11 +60,6 @@ export default function TextLayer({
           onSelect={(e) => {
             if (selectedTool === "select") {
               setSelectedObjectId(text.id);
-
-              // Open side panel
-              // dispatch(setIsSidePanelOpen(true));
-
-              // update settings to match selected text's
               setTextSize(text.fontSize || 28);
               setTextColor(text.fill || "#000");
               setTextAlignment(text.align || "left");
@@ -93,7 +88,10 @@ export default function TextLayer({
             onChange(text.id, newAttrs);
             if (roomCode) {
               const socket = await connect();
-              socket.emit("update-canvas-object", { roomCode, newAttrs });
+              socket.emit("update-canvas-object", {
+                room: roomCode,
+                object: newAttrs,
+              });
             }
           }}
           zoomLevel={zoomLevel}

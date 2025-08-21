@@ -38,8 +38,11 @@ import { useRouter } from "next/navigation";
 import { useRoomStore } from "./_store/roomStore";
 import { useSocketStore } from "./_store/socketStore";
 
-const WhiteBoard = () => {
-  const stageRef = useRef<Konva.Stage | null>(null);
+const WhiteBoard = ({
+  boardRef,
+}: {
+  boardRef: React.RefObject<Konva.Stage | null>;
+}) => {
   const [newObject, setNewObject] = useState<CanvasObjectType | null>(null);
   const [zoomLevel, setZoomLevel] = useState(1);
   const { data: session } = useSession();
@@ -307,7 +310,7 @@ const WhiteBoard = () => {
 
   function handleWheelZoom(e: KonvaEventObject<WheelEvent>): void {
     e.evt.preventDefault();
-    const stage = stageRef.current;
+    const stage = boardRef.current;
     if (!stage) return;
 
     const oldScale = stage.scaleX();
@@ -336,7 +339,7 @@ const WhiteBoard = () => {
   return (
     <>
       <Stage
-        ref={stageRef}
+        ref={boardRef}
         width={window.innerWidth}
         height={window.innerHeight}
         onMouseDown={handleMouseDown}
@@ -368,7 +371,7 @@ const WhiteBoard = () => {
       <ZoomToolbar
         zoomLevel={zoomLevel}
         setZoomLevel={setZoomLevel}
-        stageRef={stageRef}
+        stageRef={boardRef}
       />
       {showAuthModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">

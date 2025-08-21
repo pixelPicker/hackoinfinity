@@ -23,6 +23,9 @@ import {
   IconBold,
   IconItalic,
   IconUnderline,
+  IconFileExport,
+  IconDownload,
+  IconDeviceFloppy,
 } from "@tabler/icons-react";
 import { useWhiteBoardStore } from "./_store/whiteboardStore";
 import Konva from "konva";
@@ -68,7 +71,10 @@ export default function ToolBar({
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
-      if (!target.closest('.toolbar-dropdown') && !target.closest('.toolbar-button')) {
+      if (
+        !target.closest(".toolbar-dropdown") &&
+        !target.closest(".toolbar-button")
+      ) {
         setShowPenProperties(false);
         setShowShapeProperties(false);
         setShowEraserProperties(false);
@@ -76,9 +82,27 @@ export default function ToolBar({
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  const downloadURI = (uri: string, filename: string) => {
+    const a = document.createElement("a");
+    a.href = uri;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
+  const handleFileExport = () => {
+    console.log("Downloading");
+    if (!boardRef.current) return;
+    const uri = boardRef.current.toDataURL({ pixelRatio: 2 });
+    downloadURI(uri, "whiteboard.png");
+  };
+
+  const handleFileSave = () => {};
 
   const closeAllDropdowns = () => {
     setShowPenProperties(false);
@@ -101,25 +125,25 @@ export default function ToolBar({
           }}
         />
 
-        <PenSelector 
+        <PenSelector
           showColorPicker={showPenProperties}
           setShowColorPicker={setShowPenProperties}
           closeAllDropdowns={closeAllDropdowns}
         />
 
-        <TextSelector 
+        <TextSelector
           showTextPanel={showTextProperties}
           setShowTextPanel={setShowTextProperties}
           closeAllDropdowns={closeAllDropdowns}
         />
 
-        <ShapeSelector 
+        <ShapeSelector
           showShapes={showShapeProperties}
           setShowShapes={setShowShapeProperties}
           closeAllDropdowns={closeAllDropdowns}
         />
 
-        <EraserSelector 
+        <EraserSelector
           showEraser={showEraserProperties}
           setShowEraser={setShowEraserProperties}
           closeAllDropdowns={closeAllDropdowns}
@@ -145,7 +169,7 @@ export default function ToolBar({
             redo();
             if (roomCode) {
               const socket = await connect();
-              socket.emit("undo", { roomCode });
+              socket.emit("redo", { roomCode });
             }
           }}
         />
@@ -155,6 +179,16 @@ export default function ToolBar({
             canvasObjects.length === 0 ? "opacity-30" : "hover:text-red-500"
           }`}
           onClick={() => setToggleClearAllModal(true)}
+        />
+
+        <IconDeviceFloppy
+          className="cursor-pointer hover:text-blue-500"
+          onClick={handleFileSave}
+        />
+
+        <IconDownload
+          className="cursor-pointer hover:text-blue-500"
+          onClick={handleFileExport}
         />
       </section>
       {toggleClearAllModal && (
@@ -176,7 +210,7 @@ export default function ToolBar({
                   resetCanvas();
                   if (roomCode) {
                     const socket = await connect();
-                    socket.emit("undo", { roomCode });
+                    socket.emit("reset-canvas", { roomCode });
                   }
                   setToggleClearAllModal(false);
                 }}
@@ -468,7 +502,7 @@ function TextSelector({
                   if (roomCode && selectedObjectId) {
                     const socket = await connect();
                     socket.emit("update-canvas-object", {
-                      roomCode,
+                      room: roomCode,
                       object: canvasObjects.find(
                         (obj) => obj.id === selectedObjectId
                       ),
@@ -494,7 +528,7 @@ function TextSelector({
                   if (roomCode && selectedObjectId) {
                     const socket = await connect();
                     socket.emit("update-canvas-object", {
-                      roomCode,
+                      room: roomCode,
                       object: canvasObjects.find(
                         (obj) => obj.id === selectedObjectId
                       ),
@@ -518,7 +552,7 @@ function TextSelector({
                   if (roomCode && selectedObjectId) {
                     const socket = await connect();
                     socket.emit("update-canvas-object", {
-                      roomCode,
+                      room: roomCode,
                       object: canvasObjects.find(
                         (obj) => obj.id === selectedObjectId
                       ),
@@ -539,7 +573,7 @@ function TextSelector({
                     if (roomCode && selectedObjectId) {
                       const socket = await connect();
                       socket.emit("update-canvas-object", {
-                        roomCode,
+                        room: roomCode,
                         object: canvasObjects.find(
                           (obj) => obj.id === selectedObjectId
                         ),
@@ -555,7 +589,7 @@ function TextSelector({
                     if (selectedObjectId && roomCode) {
                       const socket = await connect();
                       socket.emit("update-canvas-object", {
-                        roomCode,
+                        room: roomCode,
                         object: canvasObjects.find(
                           (obj) => obj.id === selectedObjectId
                         ),
@@ -571,7 +605,7 @@ function TextSelector({
                     if (selectedObjectId && roomCode) {
                       const socket = await connect();
                       socket.emit("update-canvas-object", {
-                        roomCode,
+                        room: roomCode,
                         object: canvasObjects.find(
                           (obj) => obj.id === selectedObjectId
                         ),

@@ -8,19 +8,20 @@ datasource db {
 }
 
 model User {
-  id               String            @id @default(cuid())
-  name             String?
-  email            String            @unique
-  emailVerified    DateTime?
-  password         String?
-  image            String?
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
-  accounts         Account[]
-  Message          Message[]
-  sessions         Session[]
-  roomParticipants RoomParticipant[] @relation("UserParticipants")
-  createdRooms     Room[]            @relation("RoomCreator")
+  id            String            @id @default(cuid())
+  name          String?
+  email         String            @unique
+  emailVerified DateTime?
+  password      String?
+  image         String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  accounts      Account[]
+  posts         Post[]
+  participants  RoomParticipant[]
+  rooms         Rooms[]
+  sessions      Session[]
+  votes         Vote[]
 }
 
 model Account {
@@ -57,39 +58,79 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
-/// Rooms table for storing unique room codes
-model Room {
+model Post {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?
+  img         String
+  views       Int      @default(0)
+  upvotes     Int      @default(0)
+  downvotes   Int      @default(0)
+  comments    Int      @default(0)
+  shares      Int      @default(0)
+  trending    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  authorId    String
+  author      User     @relation(fields: [authorId], references: [id])
+  votes       Vote[]
+}
+
+model Vote {
+  id     Int    @id @default(autoincrement())
+  type   String
+  userId String
+  postId Int
+  post   Post   @relation(fields: [postId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@unique([userId, postId])
+}
+
+model Rooms {
   id           String            @id @default(cuid())
   roomCode     String            @unique
   createdById  String
   createdAt    DateTime          @default(now())
-  isActive     Boolean           @default(true)
-  Message      Message[]
+  updatedAt    DateTime          @updatedAt
+  objects      CanvasObject[]
   participants RoomParticipant[]
-  createdBy    User              @relation("RoomCreator", fields: [createdById], references: [id], onDelete: Cascade)
-
-  @@map("rooms")
+  createdBy    User              @relation(fields: [createdById], references: [id])
 }
 
-/// Join table tracking which users have joined which rooms
 model RoomParticipant {
   id       String   @id @default(cuid())
   roomId   String
   userId   String
   joinedAt DateTime @default(now())
-  room     Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  user     User     @relation("UserParticipants", fields: [userId], references: [id], onDelete: Cascade)
-
+  room     Rooms    @relation(fields: [roomId], references: [id])
+  user     User     @relation(fields: [userId], references: [id])
   @@unique([roomId, userId])
-  @@map("room_participants")
+
 }
 
-model Message {
-  id        String   @id @default(uuid())
-  roomId    String
-  userId    String
-  content   String
-  createdAt DateTime @default(now())
-  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  sender    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+model CanvasObject {
+  id             String   @id @default(cuid())
+  type           String
+  shapeName      String?
+  stroke         String?
+  strokeWidth    Int?
+  fill           String?
+  points         Json?
+  x              Float?
+  y              Float?
+  width          Float?
+  height         Float?
+  rotation       Float?
+  text           String?
+  fontSize       Int?
+  fontFamily     String?
+  fontStyle      String?
+  textDecoration String?
+  align          String?
+  lineHeight     Float?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  roomId         String
+  room           Rooms    @relation(fields: [roomId], references: [id], onDelete: Cascade)
 }

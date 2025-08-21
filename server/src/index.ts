@@ -36,7 +36,7 @@ io.on("connection", (socket) => {
   // CREATE ROOM
   socket.on("create-room", async ({ roomCode, userId }) => {
     try {
-      let room = await prisma.room.findUnique({
+      let room = await prisma.rooms.findUnique({
         where: { roomCode },
         include: {
           participants: {
@@ -46,7 +46,7 @@ io.on("connection", (socket) => {
       });
 
       if (!room) {
-        const newRoom = await prisma.room.create({
+        const newRoom = await prisma.rooms.create({
           data: {
             id: crypto.randomUUID(),
             roomCode,
@@ -63,7 +63,7 @@ io.on("connection", (socket) => {
           },
         });
 
-        room = await prisma.room.findUnique({
+        room = await prisma.rooms.findUnique({
           where: { id: newRoom.id },
           include: {
             participants: {
@@ -88,7 +88,7 @@ io.on("connection", (socket) => {
           update: {}, // no-op if already exists
         });
 
-        room = await prisma.room.findUnique({
+        room = await prisma.rooms.findUnique({
           where: { id: room.id },
           include: {
             participants: {
@@ -113,7 +113,7 @@ io.on("connection", (socket) => {
   // JOIN ROOM
   socket.on("join-room", async ({ roomCode, userId }) => {
     try {
-      const room = await prisma.room.findUnique({
+      const room = await prisma.rooms.findUnique({
         where: { roomCode },
       });
       if (!room) {
@@ -155,45 +155,45 @@ io.on("connection", (socket) => {
   });
 
   // SEND MESSAGE
-  socket.on(
-    "send-message",
-    async ({
-      roomCode,
-      userId,
-      content,
-    }: {
-      roomCode: string;
-      userId: string;
-      content: string;
-    }) => {
-      try {
-        const room = await prisma.room.findUnique({
-          where: { roomCode },
-        });
-        if (!room) return;
+  // socket.on(
+  //   "send-message",
+  //   async ({
+  //     roomCode,
+  //     userId,
+  //     content,
+  //   }: {
+  //     roomCode: string;
+  //     userId: string;
+  //     content: string;
+  //   }) => {
+  //     try {
+  //       const room = await prisma.rooms.findUnique({
+  //         where: { roomCode },
+  //       });
+  //       if (!room) return;
 
-        const newMessage = await prisma.message.create({
-          data: {
-            id: crypto.randomUUID(),
-            roomId: room.id,
-            userId,
-            content,
-            createdAt: new Date(),
-          },
-          include: { sender: true },
-        });
+  //       const newMessage = await prisma.message.create({
+  //         data: {
+  //           id: crypto.randomUUID(),
+  //           roomId: room.id,
+  //           userId,
+  //           content,
+  //           createdAt: new Date(),
+  //         },
+  //         include: { sender: true },
+  //       });
 
-        io.to(roomCode).emit("new-message", newMessage);
-      } catch (err) {
-        console.error("send-message error", err);
-      }
-    }
-  );
+  //       io.to(roomCode).emit("new-message", newMessage);
+  //     } catch (err) {
+  //       console.error("send-message error", err);
+  //     }
+  //   }
+  // );
 
   // LEAVE ROOM
   socket.on("leave-room", async ({ roomCode, userId }) => {
     try {
-      const room = await prisma.room.findUnique({
+      const room = await prisma.rooms.findUnique({
         where: { roomCode },
       });
       if (!room) return;
