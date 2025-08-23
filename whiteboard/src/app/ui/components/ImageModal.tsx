@@ -26,7 +26,7 @@ export const ImageModal: React.FC<ImageModalProps> = ({ selectedImg, onClose }) 
         />
       </div>
       
-      {/* Modal Actions */}
+      {/* Modal Actions
       <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex gap-4 bg-white/10 backdrop-blur-md rounded-2xl p-4">
         <button className="p-3 bg-white/20 rounded-xl text-white hover:bg-white/30 transition-all">
           <Heart size={20} />
@@ -37,7 +37,7 @@ export const ImageModal: React.FC<ImageModalProps> = ({ selectedImg, onClose }) 
         <button className="p-3 bg-white/20 rounded-xl text-white hover:bg-white/30 transition-all">
           <Share2 size={20} />
         </button>
-      </div>
+      </div> */}
     </div>
   );
 };

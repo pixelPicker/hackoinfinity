@@ -21,7 +21,7 @@ export interface Votes {
   [postId: number]: {
     up?: boolean;
     down?: boolean;
-  };
+  }; 
 }
 
 export type SortOption = "trending" | "top" | "recent" | "views";

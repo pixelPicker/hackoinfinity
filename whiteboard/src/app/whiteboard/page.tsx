@@ -560,11 +560,11 @@ function RoomInfoDump({
   return (
     <aside
       className={clsx(
-        "absolute mt-[20px] top-0 left-1 z-50 bg-white shadow-lg rounded-lg border border-gray-300 p-2 flex flex-col gap-4 w-64 -translate-x-0 transition-all",
+        "absolute botton-0 -translate-y-1/1 mb-[20px] left-1 z-50 bg-white shadow-lg rounded-lg border border-gray-300 p-2 flex flex-col gap-4 w-64 -translate-x-0 transition-all",
         !isOpen && "!bg-Surface !w-20 shadow-none transition-all border-none"
       )}
     >
-      <div className="flex justify-between p-[2px] items-center`">
+      <div className={clsx("flex justify-between p-[2px] items-center", !isOpen && "hidden")}>
         <h3 className="text-gray-600">Room Code</h3>
         <span className="ml-auto font-semibold">{roomCode}</span>
       </div>

@@ -104,7 +104,9 @@ export const PostCard: React.FC<PostCardProps> = ({
         <div className="flex items-center justify-between pt-4 border-t border-Accent/20 bg-gradient-to-r from-Accent/10 to-Accent/5 -mx-4 sm:-mx-6 px-4 sm:px-6 py-4 rounded-b-3xl">
           <div className="flex items-center gap-3 justify-center">
             <button
-              onClick={() => onVote(post.id, 'up')}
+              onClick={() => {onVote(post.id, 'up')
+                console.log("Post upvote/downvote");
+              }}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all hover:scale-105 font-semibold cursor-pointer ${
                 votes[post.id]?.up 
                   ? 'bg-gradient-to-r from-green-400 to-green-500 text-white border-2 border-green-600 shadow-lg' 
@@ -112,9 +114,6 @@ export const PostCard: React.FC<PostCardProps> = ({
               }`}
             >
               <ArrowBigUp size={20} />
-              <span className="text-sm font-bold">
-                {post.upvotes + (votes[post.id]?.up ? 1 : 0)}
-              </span>
             </button>
             
             <button
@@ -126,7 +125,6 @@ export const PostCard: React.FC<PostCardProps> = ({
               }`}
             >
               <ArrowBigDown size={20} />
-              <span className="text-sm font-bold">{post.downvotes}</span>
             </button>
             <button 
               onClick={() => onShare(post)}

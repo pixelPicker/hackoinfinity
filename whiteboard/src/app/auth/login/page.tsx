@@ -94,6 +94,8 @@ export default function LoginPage() {
                   id="password"
                   name="password"
                   type="password"
+                  minLength={8}
+                  maxLength={100}
                   autoComplete="current-password"
                   required
                   className={`w-full px-4 py-3 border-3 border-[var(--accent)] rounded-2xl bg-white text-[var(--primary-text)] placeholder-[var(--secondary-text)] focus:outline-none focus:ring-4 focus:ring-[var(--accent)] focus:border-transparent transition-all duration-200 ${dmsans.className}`}

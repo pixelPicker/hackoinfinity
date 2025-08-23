@@ -1,5 +1,5 @@
-import { NextResponse } from 'next/server';
-import { prisma } from '../../lib/prisma';
+import { NextResponse } from "next/server";
+import { prisma } from "../../lib/prisma";
 
 export async function GET() {
   try {
@@ -12,21 +12,20 @@ export async function GET() {
           },
         },
       },
-      orderBy: [
-        { trending: 'desc' },
-        { upvotes: 'desc' },
-      ],
+      orderBy: [{ trending: "desc" }, { upvotes: "desc" }],
     });
 
     const formattedPosts = posts.map((post: any) => ({
       id: post.id,
-      user: post.author.name || 'Anonymous',
-      avatar: post.author.image || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100',
+      user: post.author.name || "Anonymous",
+      avatar:
+        post.author.image ||
+        "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100",
       time: formatTimeAgo(post.createdAt),
       createdAt: post.createdAt.toISOString(),
       views: post.views,
       title: post.title,
-      description: post.description || '',
+      description: post.description || "",
       img: post.img,
       upvotes: post.upvotes,
       downvotes: post.downvotes,
@@ -37,8 +36,11 @@ export async function GET() {
 
     return NextResponse.json(formattedPosts);
   } catch (error) {
-    console.error('Error fetching posts:', error);
-    return NextResponse.json({ error: 'Failed to fetch posts' }, { status: 500 });
+    console.error("Error fetching posts:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch posts" },
+      { status: 500 }
+    );
   }
 }
 

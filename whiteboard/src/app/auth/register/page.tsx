@@ -78,6 +78,8 @@ export default function RegisterPage() {
                   id="name"
                   name="name"
                   type="text"
+                  maxLength={20}
+                  minLength={5}
                   autoComplete="name"
                   required
                   className={`w-full px-4 py-3 border-3 border-[var(--accent)] rounded-2xl bg-white text-[var(--primary-text)] placeholder-[var(--secondary-text)] focus:outline-none focus:ring-4 focus:ring-[var(--accent)] focus:border-transparent transition-all duration-200 ${dmsans.className}`}
@@ -118,6 +120,8 @@ export default function RegisterPage() {
                   id="password"
                   name="password"
                   type="password"
+                  minLength={8}
+                  maxLength={100}
                   autoComplete="new-password"
                   required
                   className={`w-full px-4 py-3 border-3 border-[var(--accent)] rounded-2xl bg-white text-[var(--primary-text)] placeholder-[var(--secondary-text)] focus:outline-none focus:ring-4 focus:ring-[var(--accent)] focus:border-transparent transition-all duration-200 ${dmsans.className}`}

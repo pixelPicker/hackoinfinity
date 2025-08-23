@@ -12,7 +12,9 @@ import {
 export default function Home() {
   return (
     <div className="min-h-screen w-full bg-[#fff8f0] relative">
-      <div className="absolute top-1/15 left-1/2 -translate-1/2"><Logo /></div>
+      <div className="absolute top-1/15 left-1/2 -translate-1/2">
+        <Logo />
+      </div>
       <div
         className="absolute inset-0 z-0"
         style={{
@@ -57,21 +59,17 @@ function Hero() {
           Start Drawing <IconPencilBolt />
         </Link>
         <Link
-          href="/"
+          href="/leaderboard"
           className={clsx(
             "text-Secondary-Text font-medium cursor-pointer text-lg flex items-center gap-2 border-[6px] z-[2] border-white/50 bg-clip-padding rounded-full px-10 py-3 bg-no-repeat bg-transparent",
             "before:content[''] before:w-full before:h-full before:absolute relative before:top-[5px] before:left-[5px] before:rounded-full before:blur-lg before:bg-gradient-to-t before:from-Accent before:to-transparent before:-z-10",
             "after:content[''] after:w-full after:h-full after:absolute relative after:top-[5px] after:left-[5px] after:rounded-full after:blur-lg after:bg-gradient-to-t after:from-transparent after:to-Accent"
           )}
         >
-          Try a Demo <IconPlayerPlay />
+          Leaderboard <IconTrophy />
         </Link>
       </div>
 
-      <div className="absolute bottom-[20px] cursor-pointer left-1/2 -translate-1/2 px-4 py-2 rounded-full bg-Secondary-Text/45 hover:bg-Secondary-Text/55 transition-all backdrop-blur-lg text-white flex items-center gap-2 ">
-        <IconTrophy />
-        <Link href="/leaderboard">Leaderboard</Link>
-      </div>
       <Image
         src={"/heroicons/illustration1.svg"}
         alt="Illustration of brush and paint"

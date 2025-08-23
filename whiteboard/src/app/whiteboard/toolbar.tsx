@@ -42,6 +42,9 @@ import { DefaultEventsMap } from "socket.io";
 import { useRoomStore } from "./_store/roomStore";
 import { useSession } from "next-auth/react";
 import { useSocketStore } from "./_store/socketStore";
+import { supabase } from "../lib/supabase";
+import { prisma } from "@/lib/prisma";
+import { useRouter } from "next/navigation";
 
 export default function ToolBar({
   boardRef,
@@ -60,7 +63,7 @@ export default function ToolBar({
   } = useWhiteBoardStore((s) => s);
   const [toggleClearAllModal, setToggleClearAllModal] = useState(false);
   const { roomCode } = useRoomStore((s) => s);
-  const { data } = useSession();
+  const { data: session } = useSession();
   // Global state for all toolbar dropdowns
   const [showPenProperties, setShowPenProperties] = useState(false);
   const [showShapeProperties, setShowShapeProperties] = useState(false);
@@ -95,14 +98,60 @@ export default function ToolBar({
     document.body.removeChild(a);
   };
 
-  const handleFileExport = () => {
+  function dataURLtoFile(dataUrl: string, fileName: string) {
+    const arr = dataUrl.split(",");
+    const mime = arr[0].match(/:(.*?);/)?.[1] || "image/png";
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new File([u8arr], fileName, { type: mime });
+  }
+
+  const handleFileDownload = () => {
     console.log("Downloading");
     if (!boardRef.current) return;
     const uri = boardRef.current.toDataURL({ pixelRatio: 2 });
     downloadURI(uri, "whiteboard.png");
   };
 
-  const handleFileSave = () => {};
+  const handleFileSave = async () => {
+    if (!session || !session.user || !session.user.id) return;
+    if (!boardRef.current) return;
+
+    const userId = session.user.id;
+    const fileName = `${userId}-${roomCode}/${crypto.randomUUID()}.png`;
+    const uri = boardRef.current.toDataURL({ mimeType: "image/png" });
+
+    const file = dataURLtoFile(uri, fileName);
+
+    const { data, error } = await supabase.storage
+      .from("whiteboard")
+      .upload(fileName, file, {
+        contentType: "image/png",
+        upsert: true,
+      });
+
+    if (error) throw error;
+
+    // Get public URL
+    const { data: publicUrlData } = supabase.storage
+      .from("whiteboard")
+      .getPublicUrl(fileName);
+
+    await fetch("/api/posts/create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        img: publicUrlData.publicUrl, // or fileName if you prefer
+        title: crypto.randomUUID(),
+        authorId: userId,
+      }),
+    });
+    router.push("/leaderboard")
+  };
 
   const closeAllDropdowns = () => {
     setShowPenProperties(false);
@@ -110,10 +159,11 @@ export default function ToolBar({
     setShowEraserProperties(false);
     setShowTextProperties(false);
   };
+  const router = useRouter();
   const { socket, connect } = useSocketStore();
   return (
     <>
-      <section className="fixed top-[20px] left-1/2 -translate-x-1/2 flex items-center gap-4 bg-white shadow-lg rounded-xl p-3 border border-gray-200">
+      <section className="fixed top-[20px] left-[20px] lg:left-1/2 lg:-translate-x-1/2 flex items-center gap-4 bg-white shadow-lg rounded-xl p-3 border border-gray-200">
         <IconArrowsMove
           className={clsx(
             "cursor-pointer hover:text-blue-500 toolbar-button",
@@ -181,14 +231,14 @@ export default function ToolBar({
           onClick={() => setToggleClearAllModal(true)}
         />
 
-        <IconDeviceFloppy
+        <IconFileExport
           className="cursor-pointer hover:text-blue-500"
           onClick={handleFileSave}
         />
 
         <IconDownload
           className="cursor-pointer hover:text-blue-500"
-          onClick={handleFileExport}
+          onClick={handleFileDownload}
         />
       </section>
       {toggleClearAllModal && (
